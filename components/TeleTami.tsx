@@ -22,6 +22,37 @@ export default function TeleTami({
   // Optional: use configId from environment variable
   const configId = process.env['NEXT_PUBLIC_HUME_CONFIG_ID'];
 
+  // Handle tool calls from EVI
+  const handleToolCall = async (name: string, args: any) => {
+    if (name === "recordLead") {
+      try {
+        const payload = {
+          ...args,
+          persona: persona,
+          traderHint: null, // Will be set by Ole detection logic
+        };
+        
+        const response = await fetch("/api/lead", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        
+        if (response.ok) {
+          toast.success("Lead captured & emailed!");
+        } else {
+          const error = await response.json();
+          toast.error(`Failed to capture lead: ${error.error}`);
+        }
+      } catch (error) {
+        console.error("Error submitting lead:", error);
+        toast.error("Failed to submit lead");
+      }
+    }
+  };
+
   return (
     <div className="relative grow flex flex-col mx-auto w-full overflow-hidden h-[0px]">
       <VoiceProvider
@@ -44,6 +75,8 @@ export default function TeleTami({
         onError={(error) => {
           toast.error(error.message);
         }}
+        // TODO: Add tool call handler when supported by SDK
+        // onToolCall={handleToolCall}
       >
         {/* Header with persona controls */}
         <div className="absolute top-4 right-4 z-10">
@@ -61,6 +94,7 @@ export default function TeleTami({
           accessToken={accessToken}
           persona={persona}
           spicyMode={spicyMode}
+          onToolCall={handleToolCall}
         />
       </VoiceProvider>
     </div>

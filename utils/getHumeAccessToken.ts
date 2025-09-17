@@ -10,6 +10,12 @@ export const getHumeAccessToken = async () => {
     throw new Error('Missing required environment variables (HUME_API_KEY or HUME_SECRET_KEY)');
   }
 
+  // For demo purposes, if using placeholder keys, return a demo token
+  if (apiKey.includes('demo') || secretKey.includes('demo')) {
+    console.warn('Using demo credentials - EVI features will not work');
+    return 'demo_access_token';
+  }
+
   const accessToken = await fetchAccessToken({
     apiKey: String(process.env.HUME_API_KEY),
     secretKey: String(process.env.HUME_SECRET_KEY),

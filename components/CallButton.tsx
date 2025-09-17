@@ -12,12 +12,14 @@ interface CallButtonProps {
   accessToken: string;
   persona: "professional" | "seductive" | "unhinged";
   spicyMode: boolean;
+  onToolCall: (name: string, args: any) => Promise<void>;
 }
 
 export default function CallButton({
   accessToken,
   persona,
   spicyMode,
+  onToolCall,
 }: CallButtonProps) {
   const { status, connect, messages } = useVoice();
   const [isOleMode, setIsOleMode] = useState(false);
@@ -44,23 +46,10 @@ export default function CallButton({
           traderHint: isOleMode ? "Ole detected" : null,
         };
         
-        const response = await fetch("/api/lead", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-        
-        if (response.ok) {
-          toast.success("Lead captured & emailed!");
-        } else {
-          const error = await response.json();
-          toast.error(`Failed to capture lead: ${error.error}`);
-        }
+        await onToolCall(name, payload);
       } catch (error) {
-        console.error("Error submitting lead:", error);
-        toast.error("Failed to submit lead");
+        console.error("Error in tool call handler:", error);
+        toast.error("Failed to process tool call");
       }
     }
   };

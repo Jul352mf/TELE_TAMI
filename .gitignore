@@ -36,3 +36,15 @@ package-lock.json
 # Environment files
 .env
 .env*.local
+
+# TypeScript
+tsconfig.tsbuildinfo
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+
+# Functions
+functions/lib/
+functions/node_modules/
