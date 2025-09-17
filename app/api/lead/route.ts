@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateLeadData, Lead, FirestoreLead } from '@/lib/schema';
 
-// Note: Firebase admin initialization would go here in production
-// For now, we'll create a mock implementation that validates the structure
+// Firebase admin initialization - only import when needed in production
+// import { firestore } from '@/lib/firebase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,11 +25,22 @@ export async function POST(request: NextRequest) {
       lang: 'en'
     };
     
-    // TODO: Write to Firestore leads collection
-    // const leadRef = firestore().collection('leads').doc();
-    // await leadRef.set(firestoreLead);
+    // Check if we're in production mode with real Firebase credentials
+    const isProduction = process.env.FIREBASE_PROJECT_ID && 
+                        !process.env.FIREBASE_PROJECT_ID.includes('demo');
     
-    // TODO: Create mail document for Trigger Email
+    if (isProduction) {
+      // TODO: Uncomment when Firebase is configured
+      // const { firestore } = await import('@/lib/firebase');
+      // const leadRef = firestore().collection('leads').doc();
+      // await leadRef.set(firestoreLead);
+      
+      // TODO: Create mail document for Trigger Email
+      // const emailDoc = { ... };
+      // await firestore().collection('mail').add(emailDoc);
+    }
+    
+    // Create email document structure (for logging/demo)
     const emailDoc = {
       to: process.env.LEADS_EMAIL,
       message: {
@@ -43,9 +54,6 @@ export async function POST(request: NextRequest) {
 <p><a href="https://console.firebase.google.com/">Open Console</a></p>`
       }
     };
-    
-    // TODO: Write to mail collection for Trigger Email
-    // await firestore().collection('mail').add(emailDoc);
     
     console.log('Lead validated and would be saved:', firestoreLead);
     console.log('Email that would be sent:', emailDoc);

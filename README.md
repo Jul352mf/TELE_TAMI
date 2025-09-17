@@ -100,22 +100,49 @@ TAMI collects structured trading leads with validation for:
 
 Complete end-to-end test:
 
-1. Start the application (`npm run dev`)
-2. Select persona (try "Seductive" for demo)
-3. Click "Call TAMI" button
-4. Speak a complete trading lead:
-   - "I want to SELL Aluminum ingots 99.7%"
-   - "Price is CHF 2,250 per mt"
-   - "Quantity is 500 mt"
-   - "Payment terms: LC at sight"
-   - "Incoterm: FOB"
-   - "Port: Hamburg"
-5. Verify success:
-   - [ ] Lead captured toast appears
-   - [ ] New document in Firestore `leads/` collection
-   - [ ] Email sent via Trigger Email extension
-   - [ ] Row appended to Google Sheets
-   - [ ] Audio/transcript URLs stored (when implemented)
+1. **Start the application**
+   ```bash
+   npm run dev
+   ```
+
+2. **Test the Interface**
+   - Navigate to `http://localhost:3000`
+   - Select persona (try "Seductive" for demo)
+   - Enable "🌶️ Spicy Mode" to unlock "Unhinged" option
+   - Click "Call TAMI" button (will show connection UI)
+
+3. **Test the API Directly**
+   ```bash
+   curl -X POST http://localhost:3000/api/lead \
+     -H "Content-Type: application/json" \
+     -d '{
+       "side": "SELL",
+       "product": "Aluminum ingots 99.7%",
+       "price": {"amount": 2250, "currency": "CHF", "per": "mt"},
+       "quantity": {"amount": 500, "unit": "mt"},
+       "paymentTerms": "LC at sight",
+       "incoterm": "FOB",
+       "port": "Hamburg"
+     }'
+   ```
+
+4. **Verify Results**
+   - [ ] API returns `{"ok":true}`
+   - [ ] Console shows validated lead structure
+   - [ ] Console shows email template
+   - [ ] UI components work: persona toggle, spicy mode, call button
+   - [ ] Persona selection affects the recorded persona field
+   - [ ] "Ole mode" detection ready (transcript monitoring)
+
+## Testing with Real Services
+
+When you have Firebase and Hume credentials:
+
+1. **Replace demo credentials** in `.env.local`
+2. **Uncomment Firebase code** in `/app/api/lead/route.ts`
+3. **Deploy Firebase Functions** with `firebase deploy --only functions`
+4. **Install Trigger Email extension** with SendGrid configuration
+5. **Test complete flow**: Call → tool call → Firestore → email → Sheets row
 
 ## Development
 
