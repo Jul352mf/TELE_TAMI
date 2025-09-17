@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // MVP: Server-write only for leads, calls, and mail collections
+    // Only authenticated server functions can write to these collections
+    
+    match /leads/{leadId} {
+      allow read, write: if false; // Server-only via admin SDK
+    }
+    
+    match /calls/{callId} {
+      allow read, write: if false; // Server-only via admin SDK
+    }
+    
+    match /mail/{mailId} {
+      allow read, write: if false; // Server-only via admin SDK
+    }
+    
+    // TODO: Future admin console access rules would go here
+    // match /leads/{leadId} {
+    //   allow read: if request.auth != null && 
+    //     request.auth.token.admin == true;
+    // }
+  }
+}
