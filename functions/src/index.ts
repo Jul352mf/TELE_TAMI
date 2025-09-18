@@ -40,8 +40,8 @@ export const onLeadCreate = onDocumentCreated("leads/{leadId}", async (event) =>
       scopes: ["https://www.googleapis.com/auth/spreadsheets"]
     });
 
-    const sheets = google.sheets({ version: "v4", auth });
-    const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+  const sheets = google.sheets({ version: "v4", auth });
+  const spreadsheetId = process.env.GOOGLE_SHEETS_ID?.trim();
 
     if (!spreadsheetId) {
       console.error("GOOGLE_SHEETS_ID environment variable not set");
@@ -76,6 +76,7 @@ export const onLeadCreate = onDocumentCreated("leads/{leadId}", async (event) =>
     ]];
 
     // Append to Leads sheet
+    console.log(`Appending lead ${event.params.leadId} to spreadsheet ${spreadsheetId} range Leads!A:Z`);
     await sheets.spreadsheets.values.append({
       spreadsheetId,
   range: "Leads!A:Z",
@@ -86,7 +87,16 @@ export const onLeadCreate = onDocumentCreated("leads/{leadId}", async (event) =>
     console.log(`Successfully appended lead ${event.params.leadId} to Google Sheets`);
 
   } catch (error) {
-    console.error("Error appending to Google Sheets:", error);
+    console.error("Error appending to Google Sheets:", (error as any)?.message || error);
+    const errAny = error as any;
+    if (errAny?.response) {
+      console.error("Sheets API error status:", errAny.response.status);
+      try {
+        console.error("Sheets API error body:", JSON.stringify(errAny.response.data));
+      } catch {
+        console.error("Sheets API error body (raw):", errAny.response.data);
+      }
+    }
     // Make failures non-fatal - log and continue
     // TODO: Implement retry with exponential backoff
   }
