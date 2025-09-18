@@ -144,16 +144,69 @@ export const retentionSweep = onSchedule("0 2 * * *", async (context) => {
   try {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
-    
-    console.log(`Retention sweep: Cleaning up files older than ${cutoffDate.toISOString()}`);
-    
-    // TODO: Implement actual cleanup logic
-    // - Query Firestore for leads/calls older than cutoffDate
-    // - Delete associated audio/transcript files from Cloud Storage
-    // - Update documents to remove audioUrl/transcriptUrl references
-    
-    console.log("Retention sweep completed (stub implementation)");
-    
+    console.log(`Retention sweep: Cleaning up leads older than ${cutoffDate.toISOString()}`);
+
+    const db = admin.firestore();
+    const leadsRef = db.collection('leads');
+    // Assuming documents have a createdAt (ISO or timestamp) or fallback to Firestore create time
+    // Prefer explicit createdAt field
+    const snapshot = await leadsRef.get();
+    let examined = 0;
+    let deletedLinks = 0;
+    let updatedDocs = 0;
+    const bucket = admin.storage().bucket();
+
+    for (const doc of snapshot.docs) {
+      examined++;
+      const data: any = doc.data();
+      const createdAtIso: string | undefined = data.createdAt || data.timestamp; // fallback fields
+      let createdAt: Date | null = null;
+      if (createdAtIso) {
+        try { createdAt = new Date(createdAtIso); } catch { createdAt = null; }
+      }
+      if (!createdAt && doc.createTime) {
+        try { createdAt = new Date(doc.createTime.toDate()); } catch { /* ignore */ }
+      }
+      if (!createdAt) continue;
+      if (createdAt > cutoffDate) continue;
+
+      const updates: Record<string, any> = {};
+      const mediaFields: Array<{ key: string; url?: string }> = [
+        { key: 'audioUrl', url: data.audioUrl },
+        { key: 'transcriptUrl', url: data.transcriptUrl }
+      ];
+      for (const mf of mediaFields) {
+        if (mf.url && typeof mf.url === 'string') {
+          // Expecting a gs:// or https://storage.googleapis.com/<bucket>/<path>
+          try {
+            let path: string | null = null;
+            if (mf.url.startsWith('gs://')) {
+              const without = mf.url.replace('gs://', '');
+              path = without.split('/').slice(1).join('/');
+            } else {
+              const marker = '/o/';
+              const idx = mf.url.indexOf(marker);
+              if (idx !== -1) {
+                path = decodeURIComponent(mf.url.substring(idx + marker.length).split('?')[0]);
+              }
+            }
+            if (path) {
+              await bucket.file(path).delete({ ignoreNotFound: true });
+              deletedLinks++;
+              updates[mf.key] = admin.firestore.FieldValue.delete();
+            }
+          } catch (e) {
+            console.warn('Failed deleting media for', doc.id, mf.key, (e as any)?.message || e);
+          }
+        }
+      }
+      if (Object.keys(updates).length) {
+        await doc.ref.update(updates);
+        updatedDocs++;
+      }
+    }
+
+    console.log(`Retention sweep summary: examined=${examined} mediaDeleted=${deletedLinks} docsUpdated=${updatedDocs}`);
   } catch (error) {
     console.error("Error during retention sweep:", error);
   }
