@@ -13,6 +13,7 @@ interface CallButtonProps {
   persona: "professional" | "seductive" | "unhinged" | "cynical";
   spicyMode: boolean;
   voiceId?: string;
+  modelId?: string;
   onToolCall: (name: string, args: any) => Promise<void>;
 }
 
@@ -22,9 +23,11 @@ export default function CallButton({
   spicyMode,
   voiceId,
   onToolCall,
+  modelId,
 }: CallButtonProps) {
   const { status, connect, messages, sendSessionSettings } = useVoice();
   const [isOleMode, setIsOleMode] = useState(false);
+  const [sessionId] = useState(() => crypto.randomUUID());
   
   // Monitor transcript for "Ole" detection
   useEffect(() => {
@@ -46,6 +49,7 @@ export default function CallButton({
           ...args,
           persona: isOleMode ? "interview" : persona,
           traderHint: isOleMode ? "Ole detected" : null,
+          sourceCallId: sessionId,
         };
         
         await onToolCall(name, payload);
@@ -98,6 +102,7 @@ export default function CallButton({
                   // If Hume supports setting voice via session settings, include it here
                   // This will be ignored by the backend if unsupported
                   voice: voiceId && voiceId !== "default" ? { id: voiceId } : undefined,
+                  model: modelId && modelId !== "hume-evi-3" ? { id: modelId } : undefined,
                 };
 
                 connect({

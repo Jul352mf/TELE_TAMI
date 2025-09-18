@@ -72,11 +72,12 @@ export const onLeadCreate = onDocumentCreated("leads/{leadId}", async (event) =>
       lead.transcriptUrl || "",
       lead.audioUrl || "",
       lead.summary || "",
-      lead.specialNotes || lead.notes || ""
+      lead.specialNotes || lead.notes || "",
+      lead.sourceCallId || ""
     ]];
 
     // Append to Leads sheet
-    console.log(`Appending lead ${event.params.leadId} to spreadsheet ${spreadsheetId} range Leads!A:Z`);
+  console.log(`Appending lead ${event.params.leadId} to spreadsheet ${spreadsheetId} range Leads!A:AA`);
     const maxRetries = 3;
     let attempt = 0;
     let success = false;
@@ -86,7 +87,7 @@ export const onLeadCreate = onDocumentCreated("leads/{leadId}", async (event) =>
         attempt++;
         await sheets.spreadsheets.values.append({
           spreadsheetId,
-          range: "Leads!A:Z",
+          range: "Leads!A:AA",
           valueInputOption: "USER_ENTERED",
           requestBody: { values }
         });

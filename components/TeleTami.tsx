@@ -9,6 +9,8 @@ import Controls from "./Controls";
 import Messages from "./Messages";
 import { recordLeadTool } from "@/lib/hume";
 import VoiceSelect from "./VoiceSelect";
+import SessionTimers from "./SessionTimers";
+import ModelSelect from "./ModelSelect";
 
 export default function TeleTami({
   accessToken,
@@ -18,6 +20,7 @@ export default function TeleTami({
   const [persona, setPersona] = useState<"professional" | "seductive" | "unhinged" | "cynical">("professional");
   const [spicyMode, setSpicyMode] = useState(false);
   const [voiceId, setVoiceId] = useState<string>("default");
+  const [modelId, setModelId] = useState<string>("hume-evi-3");
   const timeout = useRef<number | null>(null);
   const ref = useRef<ComponentRef<typeof Messages> | null>(null);
 
@@ -99,24 +102,28 @@ export default function TeleTami({
           }
         }}
       >
-        {/* Header with persona controls */}
-        <div className="absolute top-4 right-4 z-10 flex flex-col gap-3 items-end">
-          <PersonaToggle
-            value={persona}
-            onChange={setPersona}
-            spicyMode={spicyMode}
-            onSpicyModeChange={setSpicyMode}
-          />
-          <VoiceSelect value={voiceId} onChange={setVoiceId} />
-        </div>
-
+        <SessionTimers />
         <Messages ref={ref} />
         <Controls />
+        {/* Settings cluster below call area: horizontal on md+, vertical on mobile */}
+        <div className="w-full flex justify-center py-4">
+          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+            <PersonaToggle
+              value={persona}
+              onChange={setPersona}
+              spicyMode={spicyMode}
+              onSpicyModeChange={setSpicyMode}
+            />
+            <VoiceSelect value={voiceId} onChange={setVoiceId} />
+            <ModelSelect value={modelId} onChange={setModelId} />
+          </div>
+        </div>
         <CallButton
           accessToken={accessToken}
           persona={persona}
           spicyMode={spicyMode}
           voiceId={voiceId}
+          modelId={modelId}
           onToolCall={handleToolCall}
         />
       </VoiceProvider>
