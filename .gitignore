@@ -36,6 +36,7 @@ package-lock.json
 # Environment files
 .env
 .env*.local
+service-account.json
 
 # TypeScript
 tsconfig.tsbuildinfo
