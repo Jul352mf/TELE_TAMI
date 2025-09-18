@@ -1,10 +1,20 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { setGlobalOptions } from "firebase-functions/v2";
+import { defineSecret } from "firebase-functions/params";
 import { google } from "googleapis";
 import * as admin from "firebase-admin";
 
 // Initialize Firebase Admin
 admin.initializeApp();
+
+// Bind required secrets and default region for all functions (Gen 2)
+const GOOGLE_SERVICE_ACCOUNT_JSON = defineSecret("GOOGLE_SERVICE_ACCOUNT_JSON");
+const GOOGLE_SHEETS_ID = defineSecret("GOOGLE_SHEETS_ID");
+setGlobalOptions({
+  region: "us-central1",
+  secrets: [GOOGLE_SERVICE_ACCOUNT_JSON, GOOGLE_SHEETS_ID]
+});
 
 /**
  * Cloud Function: Append lead to Google Sheets when new lead is created
