@@ -14,7 +14,7 @@ export default function TeleTami({
 }: {
   accessToken: string;
 }) {
-  const [persona, setPersona] = useState<"professional" | "seductive" | "unhinged">("professional");
+  const [persona, setPersona] = useState<"professional" | "seductive" | "unhinged" | "cynical">("professional");
   const [spicyMode, setSpicyMode] = useState(false);
   const timeout = useRef<number | null>(null);
   const ref = useRef<ComponentRef<typeof Messages> | null>(null);

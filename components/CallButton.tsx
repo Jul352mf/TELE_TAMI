@@ -10,7 +10,7 @@ import { useState, useEffect } from "react";
 
 interface CallButtonProps {
   accessToken: string;
-  persona: "professional" | "seductive" | "unhinged";
+  persona: "professional" | "seductive" | "unhinged" | "cynical";
   spicyMode: boolean;
   onToolCall: (name: string, args: any) => Promise<void>;
 }

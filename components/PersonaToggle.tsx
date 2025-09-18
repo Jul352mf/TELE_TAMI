@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Toggle } from "@/components/ui/toggle";
 
 interface PersonaToggleProps {
-  value: "professional" | "seductive" | "unhinged";
-  onChange: (persona: "professional" | "seductive" | "unhinged") => void;
+  value: "professional" | "seductive" | "unhinged" | "cynical";
+  onChange: (persona: "professional" | "seductive" | "unhinged" | "cynical") => void;
   spicyMode: boolean;
   onSpicyModeChange: (enabled: boolean) => void;
 }
@@ -24,11 +24,12 @@ export default function PersonaToggle({
         </label>
         <select
           value={value}
-          onChange={(e) => onChange(e.target.value as "professional" | "seductive" | "unhinged")}
+          onChange={(e) => onChange(e.target.value as "professional" | "seductive" | "unhinged" | "cynical")}
           className="px-3 py-2 border border-border rounded-md bg-background text-foreground"
         >
           <option value="professional">Professional</option>
           <option value="seductive">Seductive</option>
+          <option value="cynical">Cynical</option>
           {spicyMode && <option value="unhinged">Unhinged</option>}
         </select>
       </div>
