@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { recordLeadTool, buildSystemPrompt, detectOleMode, addOrUpdateLeadFieldTool, finalizeLeadDraftTool, getMissingFieldsTool, getDraftSummaryTool, confirmFieldValueTool } from "@/lib/hume";
 import { emit } from "@/utils/telemetry";
 import { useState, useEffect } from "react";
+import { useLeadDraft } from "@/components/LeadDraftProvider";
 
 interface CallButtonProps {
   accessToken: string;
@@ -29,6 +30,7 @@ export default function CallButton({
   const { status, connect, messages, sendSessionSettings } = useVoice();
   const [isOleMode, setIsOleMode] = useState(false);
   const [sessionId] = useState(() => crypto.randomUUID());
+  const { draft, patchDraft, startNewDraft, clearDraft } = useLeadDraft();
   
   // Monitor transcript for "Ole" detection
   useEffect(() => {
@@ -55,27 +57,62 @@ export default function CallButton({
         await onToolCall(name, payload);
         return;
       }
-      if (name === 'addOrUpdateLeadField') {
-        // For now just log; future: integrate with draft context (already available higher in tree)
-        console.log('[incremental] field update', args);
-        return;
-      }
-      if (name === 'finalizeLeadDraft') {
-        console.log('[incremental] finalize draft request', args);
-        // Eventually will assemble draft & call recordLead automatically client-side
-        return;
-      }
-      if (name === 'getMissingFields') {
-        console.log('[incremental] get missing fields request', args);
-        return;
-      }
-      if (name === 'getDraftSummary') {
-        console.log('[incremental] get draft summary request', args);
-        return;
-      }
-      if (name === 'confirmFieldValue') {
-        console.log('[incremental] confirm field value', args);
-        return;
+      if (process.env.NEXT_PUBLIC_INCREMENTAL_LEADS === '1') {
+        if (name === 'addOrUpdateLeadField') {
+          const { field, value } = args || {};
+            if (!draft) startNewDraft();
+            patchDraft({ [field]: value });
+          return;
+        }
+        if (name === 'confirmFieldValue') {
+          // Currently same as update; could mark confirmation metadata later
+          const { field, value } = args || {};
+          if (!draft) startNewDraft();
+          patchDraft({ [field]: value });
+          return;
+        }
+        if (name === 'getMissingFields') {
+          // No-op: logic resolved in model; could send tool response later
+          return;
+        }
+        if (name === 'getDraftSummary') {
+          return; // summarization handled by model conversationally
+        }
+        if (name === 'finalizeLeadDraft') {
+          // Validate required fields present before calling recordLead
+          const required = ['side','product','price','quantity','paymentTerms','incoterm'];
+          const missing = required.filter(f => !(draft as any)?.[f]);
+          if (missing.length) {
+            toast.error(`Cannot finalize, missing: ${missing.join(', ')}`);
+            return;
+          }
+          // Synthesize payload shaped like recordLead expects (best-effort)
+          const payload = {
+            side: (draft as any)?.side,
+            product: (draft as any)?.product,
+            price: { amount: (draft as any)?.price?.amount || (draft as any)?.price, currency: 'USD', per: 'mt' },
+            quantity: { amount: (draft as any)?.quantity?.amount || (draft as any)?.quantity, unit: 'mt' },
+            paymentTerms: (draft as any)?.paymentTerms,
+            incoterm: (draft as any)?.incoterm,
+            loadingLocation: (draft as any)?.loadingLocation,
+            deliveryLocation: (draft as any)?.deliveryLocation,
+            loadingCountry: (draft as any)?.loadingCountry,
+            deliveryCountry: (draft as any)?.deliveryCountry,
+            packaging: (draft as any)?.packaging,
+            transportMode: (draft as any)?.transportMode,
+            priceValidity: (draft as any)?.priceValidity,
+            availabilityTime: (draft as any)?.availabilityTime,
+            availabilityQty: (draft as any)?.availabilityQty,
+            deliveryTimeframe: (draft as any)?.deliveryTimeframe,
+            summary: (draft as any)?.summary,
+            notes: (draft as any)?.notes,
+            specialNotes: (draft as any)?.specialNotes,
+            traderName: (draft as any)?.traderName,
+          };
+          await onToolCall('recordLead', payload);
+          clearDraft();
+          return;
+        }
       }
     } catch (error) {
       console.error("Error in tool call handler:", error);
