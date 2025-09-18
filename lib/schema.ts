@@ -29,7 +29,13 @@ export const leadJsonSchema = {
       "type": "string",
       "enum": ["EXW","FCA","CPT","CIP","DAP","DPU","DDP","FAS","FOB","CFR","CIF"]
     },
+    // Legacy field; keep optional for backward compatibility
     "port": { "type": "string", "minLength": 2 },
+    // New location fields: at least one of loading or delivery is required
+    "loadingLocation": { "type": "string", "minLength": 2 },
+    "deliveryLocation": { "type": "string", "minLength": 2 },
+    "loadingCountry": { "type": "string", "minLength": 2 },
+    "deliveryCountry": { "type": "string", "minLength": 2 },
     "packaging": { "type": "string" },
     "transportMode": { "type": "string" },
     "priceValidity": { "type": "string" },
@@ -39,9 +45,16 @@ export const leadJsonSchema = {
     "sourceCallId": { "type": "string" },
     "transcriptUrl": { "type": "string" },
     "audioUrl": { "type": "string" },
-    "notes": { "type": "string" }
+    "notes": { "type": "string" },
+    "summary": { "type": "string" },
+    "specialNotes": { "type": "string" }
   },
-  "required": ["side","product","price","quantity","paymentTerms","incoterm","port"]
+  // Required core fields; port is no longer required. Enforce locations via anyOf below.
+  "required": ["side","product","price","quantity","paymentTerms","incoterm"],
+  "anyOf": [
+    { "required": ["loadingLocation"] },
+    { "required": ["deliveryLocation"] }
+  ]
 } as const;
 
 // TypeScript interface for Lead
@@ -59,7 +72,11 @@ export interface Lead {
   };
   paymentTerms: string;
   incoterm: "EXW"|"FCA"|"CPT"|"CIP"|"DAP"|"DPU"|"DDP"|"FAS"|"FOB"|"CFR"|"CIF";
-  port: string;
+  port?: string;
+  loadingLocation?: string;
+  deliveryLocation?: string;
+  loadingCountry?: string;
+  deliveryCountry?: string;
   packaging?: string;
   transportMode?: string;
   priceValidity?: string;
@@ -70,6 +87,8 @@ export interface Lead {
   transcriptUrl?: string;
   audioUrl?: string;
   notes?: string;
+  summary?: string;
+  specialNotes?: string;
 }
 
 // Extended Lead interface for Firestore

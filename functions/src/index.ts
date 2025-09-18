@@ -48,7 +48,11 @@ export const onLeadCreate = onDocumentCreated("leads/{leadId}", async (event) =>
       `${lead.quantity.amount} ${lead.quantity.unit}`,
       lead.paymentTerms,
       lead.incoterm,
-      lead.port,
+      lead.port || "",
+      lead.loadingLocation || "",
+      lead.loadingCountry || "",
+      lead.deliveryLocation || "",
+      lead.deliveryCountry || "",
       lead.packaging || "",
       lead.transportMode || "",
       lead.priceValidity || "",
@@ -57,13 +61,14 @@ export const onLeadCreate = onDocumentCreated("leads/{leadId}", async (event) =>
       lead.deliveryTimeframe || "",
       lead.transcriptUrl || "",
       lead.audioUrl || "",
-      lead.notes || ""
+      lead.summary || "",
+      lead.specialNotes || lead.notes || ""
     ]];
 
     // Append to Leads sheet
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: "Leads!A:Z",
+  range: "Leads!A:Z",
       valueInputOption: "USER_ENTERED",
       requestBody: { values }
     });

@@ -75,8 +75,27 @@ export default function TeleTami({
         onError={(error) => {
           toast.error(error.message);
         }}
-        // TODO: Add tool call handler when supported by SDK
-        // onToolCall={handleToolCall}
+        onToolCall={async (message, send) => {
+          try {
+            const name = message.name;
+            let args: any = {};
+            try {
+              args = message.parameters ? JSON.parse(message.parameters as unknown as string) : {};
+            } catch {
+              args = {};
+            }
+            await handleToolCall(name, args);
+            return send.success(JSON.stringify({ ok: true }));
+          } catch (e: any) {
+            console.error("Tool call handler error:", e);
+            return send.error({
+              error: "tool_error",
+              code: "LEAD_CAPTURE_FAILED",
+              level: "warn",
+              content: e?.message || "failed",
+            });
+          }
+        }}
       >
         {/* Header with persona controls */}
         <div className="absolute top-4 right-4 z-10">

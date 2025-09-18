@@ -21,7 +21,7 @@ export default function CallButton({
   spicyMode,
   onToolCall,
 }: CallButtonProps) {
-  const { status, connect, messages } = useVoice();
+  const { status, connect, messages, sendSessionSettings } = useVoice();
   const [isOleMode, setIsOleMode] = useState(false);
   
   // Monitor transcript for "Ole" detection
@@ -56,6 +56,7 @@ export default function CallButton({
 
   const effectivePersona = spicyMode && persona === "unhinged" ? "unhinged" : persona;
   const systemPrompt = buildSystemPrompt(effectivePersona, isOleMode);
+  const configId = process.env.NEXT_PUBLIC_HUME_CONFIG_ID;
 
   return (
     <AnimatePresence>
@@ -81,14 +82,29 @@ export default function CallButton({
             <Button
               className="z-50 flex items-center gap-1.5 rounded-full px-8 py-4 text-lg shadow-lg"
               onClick={() => {
+                const sessionSettings = {
+                  type: "session_settings" as const,
+                  systemPrompt: systemPrompt,
+                  tools: [
+                    {
+                      type: "function" as const,
+                      name: recordLeadTool.name,
+                      description: recordLeadTool.description,
+                      parameters: JSON.stringify(recordLeadTool.parameters),
+                    },
+                  ],
+                };
+
                 connect({
                   auth: { type: "accessToken", value: accessToken },
-                  // Add system prompt and tools configuration here when implementing
-                  // For now, we'll use the basic connection
+                  configId,
+                  sessionSettings,
                 })
                   .then(() => {
                     console.log("Connected with persona:", effectivePersona);
                     console.log("System prompt:", systemPrompt);
+                    // Re-send session settings to ensure they apply before any initial response
+                    sendSessionSettings(sessionSettings);
                   })
                   .catch(() => {
                     toast.error("Unable to start call");
