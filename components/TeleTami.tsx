@@ -103,11 +103,12 @@ export default function TeleTami({
         }}
       >
         <SessionTimers />
-        <Messages ref={ref} />
+  <div className="pt-6 md:pt-10" />
+  <Messages ref={ref} />
         <Controls />
         {/* Settings cluster below call area: horizontal on md+, vertical on mobile */}
-        <div className="w-full flex justify-center py-4">
-          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+        <div className="w-full flex justify-center py-4 mt-2 md:mt-0">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-stretch md:items-center max-w-4xl mx-auto px-4">
             <PersonaToggle
               value={persona}
               onChange={setPersona}

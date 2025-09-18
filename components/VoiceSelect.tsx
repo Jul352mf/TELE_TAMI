@@ -13,14 +13,15 @@ export default function VoiceSelect({
   onChange: (voiceId: string) => void;
 }) {
   const voices: VoiceOption[] = [
-    { id: "default", label: "Default" },
-    // Add your Hume voice IDs/names here if available
-    // { id: "voice_ava", label: "Ava" },
-    // { id: "voice_liam", label: "Liam" },
+    { id: "default", label: "Current Default" },
+    { id: "ee96fb5f-ec1a-4f41-a9ba-6d119e64c8fd", label: "Vince Douglas" },
+    { id: "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c", label: "Ava Song" },
+    { id: "96ee3964-5f3f-4a5a-be09-393e833aaf0e", label: "Imani Carter" },
+    { id: "2c0e2c10-ac19-4aac-93d0-29c385d7364e", label: "Ghost (Unfinished Biz)" },
   ];
 
   return (
-    <div className="flex flex-col gap-2">
+  <div className="flex flex-col gap-2 min-w-[200px]">
       <label className="text-sm font-medium text-muted-foreground">Voice</label>
       <select
         value={value}

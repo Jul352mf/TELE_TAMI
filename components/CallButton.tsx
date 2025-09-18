@@ -113,6 +113,8 @@ export default function CallButton({
                   .then(() => {
                     console.log("Connected with persona:", effectivePersona);
                     console.log("System prompt:", systemPrompt);
+                    console.log("Voice ID:", voiceId || "(default)");
+                    console.log("Model ID:", modelId || "hume-evi-3");
                     // Re-send session settings to ensure they apply before any initial response
                     sendSessionSettings(sessionSettings);
                   })
