@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { Phone } from "lucide-react";
 import { toast } from "sonner";
 import { recordLeadTool, buildSystemPrompt, detectOleMode } from "@/lib/hume";
+import { emit } from "@/utils/telemetry";
 import { useState, useEffect } from "react";
 
 interface CallButtonProps {
@@ -115,6 +116,10 @@ export default function CallButton({
                     console.log("System prompt:", systemPrompt);
                     console.log("Voice ID:", voiceId || "(default)");
                     console.log("Model ID:", modelId || "hume-evi-3");
+                    emit({ type: 'session_connected', model: modelId || 'hume-evi-3', voice: voiceId || 'default' });
+                    if (systemPrompt.includes('CONSENT LINE:')) {
+                      emit({ type: 'consent_injected' });
+                    }
                     // Re-send session settings to ensure they apply before any initial response
                     sendSessionSettings(sessionSettings);
                   })

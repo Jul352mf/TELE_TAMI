@@ -6,6 +6,7 @@ import { Nav } from "@/components/Nav";
 import { cn } from "@/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { LeadDraftProvider } from "@/components/LeadDraftProvider";
 
 export const metadata: Metadata = {
   title: "Hume AI - EVI - Next.js Starter",
@@ -32,9 +33,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Nav />
-          {children}
-          <Toaster position="top-center" richColors={true} />
+          <LeadDraftProvider>
+            <Nav />
+            {children}
+            <Toaster position="top-center" richColors={true} />
+          </LeadDraftProvider>
         </ThemeProvider>
       </body>
     </html>
