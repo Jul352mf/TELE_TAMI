@@ -1,7 +1,7 @@
 "use client";
 
 import { VoiceProvider } from "@humeai/voice-react";
-import { useState, ComponentRef, useRef } from "react";
+import { useState, ComponentRef, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import PersonaToggle from "./PersonaToggle";
 import CallButton from "./CallButton";
@@ -21,6 +21,28 @@ export default function TeleTami({
   const [spicyMode, setSpicyMode] = useState(false);
   const [voiceId, setVoiceId] = useState<string>("default");
   const [modelId, setModelId] = useState<string>("hume-evi-3");
+
+  // Restore persisted settings
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('tami:settings:v1');
+      if (stored) {
+        const { persona, spicyMode, voiceId, modelId } = JSON.parse(stored);
+        if (persona) setPersona(persona);
+        if (typeof spicyMode === 'boolean') setSpicyMode(spicyMode);
+        if (voiceId) setVoiceId(voiceId);
+        if (modelId) setModelId(modelId);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // Persist settings debounced
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      try { localStorage.setItem('tami:settings:v1', JSON.stringify({ persona, spicyMode, voiceId, modelId })); } catch { /* ignore */ }
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [persona, spicyMode, voiceId, modelId]);
   const timeout = useRef<number | null>(null);
   const ref = useRef<ComponentRef<typeof Messages> | null>(null);
 

@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 
 export interface LeadDraft {
   id: string; // uuid per active draft
@@ -23,6 +23,7 @@ export interface LeadDraft {
   notes?: string;
   specialNotes?: string;
   traderName?: string;
+  reasonCodes?: string[]; // tracking missing/blocked field codes
   // meta
   updatedAt: number;
 }
@@ -32,6 +33,8 @@ interface LeadDraftContextValue {
   startNewDraft: () => void;
   patchDraft: (partial: Partial<LeadDraft>) => void;
   clearDraft: () => void;
+  addReasonCode: (code: string) => void;
+  removeReasonCode: (code: string) => void;
 }
 
 const LeadDraftContext = createContext<LeadDraftContextValue | undefined>(undefined);
@@ -42,6 +45,34 @@ function uuid() {
 
 export const LeadDraftProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [draft, setDraft] = useState<LeadDraft | null>(null);
+  const saveTimer = useRef<number | null>(null);
+
+  // Restore on mount
+  useEffect(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('leadDraft:v1') : null;
+      if (raw) {
+        const parsed = JSON.parse(raw) as LeadDraft;
+        setDraft(parsed);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Debounced autosave
+  useEffect(() => {
+    if (!draft) return;
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      try {
+        localStorage.setItem('leadDraft:v1', JSON.stringify(draft));
+      } catch { /* ignore */ }
+    }, 300);
+    return () => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    };
+  }, [draft]);
 
   const startNewDraft = useCallback(() => {
     setDraft({ id: uuid(), updatedAt: Date.now() });
@@ -54,10 +85,30 @@ export const LeadDraftProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   }, []);
 
-  const clearDraft = useCallback(() => setDraft(null), []);
+  const clearDraft = useCallback(() => {
+    setDraft(null);
+    try { localStorage.removeItem('leadDraft:v1'); } catch { /* ignore */ }
+  }, []);
+
+  const addReasonCode = useCallback((code: string) => {
+    setDraft(prev => {
+      if (!prev) return prev;
+      const set = new Set(prev.reasonCodes || []);
+      set.add(code);
+      return { ...prev, reasonCodes: Array.from(set), updatedAt: Date.now() };
+    });
+  }, []);
+
+  const removeReasonCode = useCallback((code: string) => {
+    setDraft(prev => {
+      if (!prev || !prev.reasonCodes) return prev;
+      const next = prev.reasonCodes.filter(c => c !== code);
+      return { ...prev, reasonCodes: next, updatedAt: Date.now() };
+    });
+  }, []);
 
   return (
-    <LeadDraftContext.Provider value={{ draft, startNewDraft, patchDraft, clearDraft }}>
+    <LeadDraftContext.Provider value={{ draft, startNewDraft, patchDraft, clearDraft, addReasonCode, removeReasonCode }}>
       {children}
     </LeadDraftContext.Provider>
   );
