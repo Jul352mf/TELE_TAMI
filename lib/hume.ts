@@ -86,6 +86,34 @@ export const finalizeLeadDraftTool = {
   }
 };
 
+// Phase 4: query / confirm helpers (also behind incremental flag to avoid clutter otherwise)
+export const getMissingFieldsTool = {
+  name: 'getMissingFields',
+  description: 'Internal diagnostic: returns list of required fields still missing from draft (no user-facing output). Call only if trader explicitly asks what remains.',
+  parameters: { type: 'object', properties: {} }
+};
+
+export const getDraftSummaryTool = {
+  name: 'getDraftSummary',
+  description: 'Summarize the current draft fields so trader can confirm. Use before finalizing if trader asks for a recap.',
+  parameters: { type: 'object', properties: { concise: { type: 'boolean', description: 'If true keep summary short' } } }
+};
+
+export const confirmFieldValueTool = {
+  name: 'confirmFieldValue',
+  description: 'Explicitly mark a field as confirmed after user validates it. Only call after positive acknowledgement.',
+  parameters: {
+    type: 'object',
+    properties: {
+      field: { type: 'string', enum: [
+        "side","product","price","quantity","paymentTerms","incoterm","loadingLocation","deliveryLocation","loadingCountry","deliveryCountry","packaging","transportMode","priceValidity","availabilityTime","availabilityQty","deliveryTimeframe","summary","notes","specialNotes","traderName"
+      ] },
+      value: { type: 'string' }
+    },
+    required: ['field','value']
+  }
+};
+
 // Prompt segments (structured)
 const PROMPT_ROLE = `You are TAMI, an elite AI voice assistant in the commodity trading sector. You connect people across continents and reliably collect high-quality trading leads.`;
 
@@ -154,6 +182,8 @@ export function buildSystemPrompt(persona: keyof typeof personaPrompts, isOleMod
   if (isOleMode) ordered.push("INTERVIEW MODE:" + " " + interviewModePrompt);
   if (process.env.NEXT_PUBLIC_INCREMENTAL_LEADS === '1') {
     ordered.push("INCREMENTAL MODE: Use addOrUpdateLeadField after each confirmed field; only call finalizeLeadDraft when all required fields are complete. Do NOT call recordLead directly unless incremental tools are disabled.");
+    ordered.push("QUERY & CONFIRM: getDraftSummary for recap on request; getMissingFields only when trader asks what's left; confirmFieldValue only immediately after trader explicitly confirms that field.");
+    ordered.push("SENTIMENT: If trader sounds frustrated, slow pace, acknowledge concern briefly, then continue focused collection. If enthusiastic, you may accelerate but keep one-field-per-turn discipline.");
   }
   return ordered.filter(Boolean).join("\n\n");
 }

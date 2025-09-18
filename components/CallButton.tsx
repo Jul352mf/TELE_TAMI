@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Button } from "./ui/button";
 import { Phone } from "lucide-react";
 import { toast } from "sonner";
-import { recordLeadTool, buildSystemPrompt, detectOleMode, addOrUpdateLeadFieldTool, finalizeLeadDraftTool } from "@/lib/hume";
+import { recordLeadTool, buildSystemPrompt, detectOleMode, addOrUpdateLeadFieldTool, finalizeLeadDraftTool, getMissingFieldsTool, getDraftSummaryTool, confirmFieldValueTool } from "@/lib/hume";
 import { emit } from "@/utils/telemetry";
 import { useState, useEffect } from "react";
 
@@ -65,6 +65,18 @@ export default function CallButton({
         // Eventually will assemble draft & call recordLead automatically client-side
         return;
       }
+      if (name === 'getMissingFields') {
+        console.log('[incremental] get missing fields request', args);
+        return;
+      }
+      if (name === 'getDraftSummary') {
+        console.log('[incremental] get draft summary request', args);
+        return;
+      }
+      if (name === 'confirmFieldValue') {
+        console.log('[incremental] confirm field value', args);
+        return;
+      }
     } catch (error) {
       console.error("Error in tool call handler:", error);
       toast.error("Failed to process tool call");
@@ -120,6 +132,24 @@ export default function CallButton({
                       name: finalizeLeadDraftTool.name,
                       description: finalizeLeadDraftTool.description,
                       parameters: JSON.stringify(finalizeLeadDraftTool.parameters)
+                    },
+                    {
+                      type: 'function',
+                      name: getMissingFieldsTool.name,
+                      description: getMissingFieldsTool.description,
+                      parameters: JSON.stringify(getMissingFieldsTool.parameters)
+                    },
+                    {
+                      type: 'function',
+                      name: getDraftSummaryTool.name,
+                      description: getDraftSummaryTool.description,
+                      parameters: JSON.stringify(getDraftSummaryTool.parameters)
+                    },
+                    {
+                      type: 'function',
+                      name: confirmFieldValueTool.name,
+                      description: confirmFieldValueTool.description,
+                      parameters: JSON.stringify(confirmFieldValueTool.parameters)
                     }
                   );
                 }
