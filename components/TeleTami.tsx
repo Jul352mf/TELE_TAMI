@@ -1,6 +1,6 @@
 "use client";
 
-import { VoiceProvider } from "@humeai/voice-react";
+import { VoiceProvider, useVoice } from "@humeai/voice-react";
 import { useState, ComponentRef, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import PersonaToggle from "./PersonaToggle";
@@ -12,11 +12,7 @@ import VoiceSelect from "./VoiceSelect";
 import SessionTimers from "./SessionTimers";
 import ModelSelect from "./ModelSelect";
 
-export default function TeleTami({
-  accessToken,
-}: {
-  accessToken: string;
-}) {
+export default function TeleTami({ accessToken }: { accessToken: string }) {
   const [persona, setPersona] = useState<"professional" | "seductive" | "unhinged" | "cynical">("professional");
   const [spicyMode, setSpicyMode] = useState(false);
   const [voiceId, setVoiceId] = useState<string>("default");
@@ -80,76 +76,95 @@ export default function TeleTami({
     }
   };
 
-  return (
-    <div className="relative grow flex flex-col mx-auto w-full overflow-hidden h-[0px]">
-      <VoiceProvider
-        onMessage={() => {
-          if (timeout.current) {
-            window.clearTimeout(timeout.current);
-          }
+  // Inner component consuming voice status (must be inside provider)
+  function SessionUI() {
+    const { status } = useVoice();
+    const connected = status.value === 'connected';
 
-          timeout.current = window.setTimeout(() => {
-            if (ref.current) {
-              const scrollHeight = ref.current.scrollHeight;
-
-              ref.current.scrollTo({
-                top: scrollHeight,
-                behavior: "smooth",
-              });
-            }
-          }, 200);
-        }}
-        onError={(error) => {
-          toast.error(error.message);
-        }}
-        onToolCall={async (message, send) => {
-          try {
-            const name = message.name;
-            let args: any = {};
-            try {
-              args = message.parameters ? JSON.parse(message.parameters as unknown as string) : {};
-            } catch {
-              args = {};
-            }
-            await handleToolCall(name, args);
-            return send.success(JSON.stringify({ ok: true }));
-          } catch (e: any) {
-            console.error("Tool call handler error:", e);
-            return send.error({
-              error: "tool_error",
-              code: "LEAD_CAPTURE_FAILED",
-              level: "warn",
-              content: e?.message || "failed",
-            });
-          }
-        }}
-      >
-        <SessionTimers />
-  <div className="pt-6 md:pt-10" />
-  <Messages ref={ref} />
-        <Controls />
-        {/* Settings cluster below call area: horizontal on md+, vertical on mobile */}
-        <div className="w-full flex justify-center py-4 mt-2 md:mt-0">
-          <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-stretch md:items-center max-w-4xl mx-auto px-4">
-            <PersonaToggle
-              value={persona}
-              onChange={setPersona}
-              spicyMode={spicyMode}
-              onSpicyModeChange={setSpicyMode}
-            />
-            <VoiceSelect value={voiceId} onChange={setVoiceId} />
-            <ModelSelect value={modelId} onChange={setModelId} />
+    if (!connected) {
+      // Pre-call minimal centered layout: two vertical sections
+      return (
+        <div className="min-h-screen w-full flex items-center justify-center px-4">
+          <div className="w-full max-w-3xl flex flex-col items-center gap-10">
+            {/* Top section: Call button */}
+            <div className="w-full flex justify-center">
+              <CallButton
+                accessToken={accessToken}
+                persona={persona}
+                spicyMode={spicyMode}
+                voiceId={voiceId}
+                modelId={modelId}
+                onToolCall={handleToolCall}
+              />
+            </div>
+            {/* Bottom section: horizontal settings row */}
+            <div className="w-full flex flex-wrap justify-center gap-6">
+              <PersonaToggle
+                value={persona}
+                onChange={setPersona}
+                spicyMode={spicyMode}
+                onSpicyModeChange={setSpicyMode}
+              />
+              <VoiceSelect value={voiceId} onChange={setVoiceId} />
+              <ModelSelect value={modelId} onChange={setModelId} />
+            </div>
           </div>
         </div>
-        <CallButton
-          accessToken={accessToken}
-          persona={persona}
-          spicyMode={spicyMode}
-          voiceId={voiceId}
-          modelId={modelId}
-          onToolCall={handleToolCall}
-        />
-      </VoiceProvider>
-    </div>
+      );
+    }
+
+    // Connected session view
+    return (
+      <div className="flex flex-col h-screen w-full">
+        <SessionTimers />
+        <div className="flex-1 overflow-hidden px-4 py-4 max-w-5xl w-full mx-auto">
+          <Messages ref={ref} />
+        </div>
+        <div className="border-t border-muted/20" />
+        <Controls />
+      </div>
+    );
+  }
+
+  return (
+    <VoiceProvider
+      onMessage={() => {
+        if (timeout.current) {
+          window.clearTimeout(timeout.current);
+        }
+        timeout.current = window.setTimeout(() => {
+          if (ref.current) {
+            const scrollHeight = ref.current.scrollHeight;
+            ref.current.scrollTo({ top: scrollHeight, behavior: 'smooth' });
+          }
+        }, 200);
+      }}
+      onError={(error) => {
+        toast.error(error.message);
+      }}
+      onToolCall={async (message, send) => {
+        try {
+          const name = message.name;
+          let args: any = {};
+          try {
+            args = message.parameters ? JSON.parse(message.parameters as unknown as string) : {};
+          } catch {
+            args = {};
+          }
+          await handleToolCall(name, args);
+          return send.success(JSON.stringify({ ok: true }));
+        } catch (e: any) {
+          console.error('Tool call handler error:', e);
+          return send.error({
+            error: 'tool_error',
+            code: 'LEAD_CAPTURE_FAILED',
+            level: 'warn',
+            content: e?.message || 'failed',
+          });
+        }
+      }}
+    >
+      <SessionUI />
+    </VoiceProvider>
   );
 }

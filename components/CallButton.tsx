@@ -125,29 +125,11 @@ export default function CallButton({
   const configId = process.env.NEXT_PUBLIC_HUME_CONFIG_ID;
 
   return (
-    <AnimatePresence>
-      {status.value !== "connected" ? (
-        <motion.div
-          className="fixed inset-0 p-4 flex items-center justify-center bg-background"
-          initial="initial"
-          animate="enter"
-          exit="exit"
-          variants={{
-            initial: { opacity: 0 },
-            enter: { opacity: 1 },
-            exit: { opacity: 0 },
-          }}
-        >
-          <motion.div
-            variants={{
-              initial: { scale: 0.5 },
-              enter: { scale: 1 },
-              exit: { scale: 0.5 },
-            }}
-          >
-            <Button
-              className="z-50 flex items-center gap-1.5 rounded-full px-8 py-4 text-lg shadow-lg"
-              onClick={() => {
+    <div className="w-full flex justify-center py-4">
+      {status.value !== 'connected' ? (
+        <Button
+          className="flex items-center gap-1.5 rounded-full px-8 py-4 text-lg shadow-md"
+          onClick={() => {
                 const tools: any[] = [
                   {
                     type: "function" as const,
@@ -221,17 +203,17 @@ export default function CallButton({
                   .catch(() => {
                     toast.error("Unable to start call");
                   });
-              }}
-            >
-              <Phone
-                className="size-5 opacity-50 fill-current"
-                strokeWidth={0}
-              />
-              <span>Call TAMI</span>
-            </Button>
-          </motion.div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>
+          }}
+        >
+          <Phone className="size-5 opacity-50 fill-current" strokeWidth={0} />
+          <span>Call TAMI</span>
+        </Button>
+      ) : (
+        <div className="text-sm text-muted-foreground flex items-center gap-2">
+          <span className="inline-block size-2 rounded-full bg-green-500 animate-pulse" />
+          Live session active
+        </div>
+      )}
+    </div>
   );
 }

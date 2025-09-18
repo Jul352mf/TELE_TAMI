@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { Toggle } from "@/components/ui/toggle";
+import { Select, SelectItem } from "@/components/ui/select";
 
 interface PersonaToggleProps {
   value: "professional" | "seductive" | "unhinged" | "cynical";
@@ -17,32 +17,21 @@ export default function PersonaToggle({
   onSpicyModeChange,
 }: PersonaToggleProps) {
   return (
-    <div className="flex flex-col gap-4 items-center">
-      <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-muted-foreground">
-          Persona
-        </label>
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value as "professional" | "seductive" | "unhinged" | "cynical")}
-          className="px-3 py-2 border border-border rounded-md bg-background text-foreground"
-        >
-          <option value="professional">Professional</option>
-          <option value="seductive">Seductive</option>
-          <option value="cynical">Cynical</option>
-          {spicyMode && <option value="unhinged">Unhinged</option>}
-        </select>
-      </div>
-      
-      <div className="flex items-center gap-2">
-        <Toggle
-          pressed={spicyMode}
-          onPressedChange={onSpicyModeChange}
-          className="text-sm"
-        >
-          🌶️ Spicy Mode
-        </Toggle>
-      </div>
+    <div className="flex items-end gap-3">
+      <Select label="Persona" value={value} onValueChange={(v) => onChange(v as any)}>
+        <SelectItem value="professional">Professional</SelectItem>
+        <SelectItem value="seductive">Seductive</SelectItem>
+        <SelectItem value="cynical">Cynical</SelectItem>
+        {spicyMode && <SelectItem value="unhinged">Unhinged</SelectItem>}
+      </Select>
+      <Toggle
+        pressed={spicyMode}
+        onPressedChange={onSpicyModeChange}
+        variant="outline"
+        className="h-9 px-3 text-xs font-medium"
+      >
+        🌶️ Spicy
+      </Toggle>
     </div>
   );
 }

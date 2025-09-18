@@ -127,7 +127,7 @@ const PROMPT_FLOW = `FLOW PHASES:\n1) Greet + ask who you are speaking with.\n2)
 
 const PROMPT_MULTI_LEAD = `MULTI-LEAD: Handle one lead at a time. After confirming a lead ask if there are more. Maintain clarity which lead is being captured. Do not mix fields across leads.`;
 
-const PROMPT_BEHAVIOR = `BEHAVIOR RULES:\n- One field per turn.\n- Keep responses short (<=2 sentences).\n- Confirm each numeric value once.\n- If a required field remains missing after two friendly attempts: final attempt ends politely (no profanity).\n- Never send multiple back-to-back messages.\n- Natural tempo: one idea per turn with brief pauses.\n- Light humor / subtle sass OK; remain professional.\n- Adapt tone to trader mood (mirror lightly).`;
+const PROMPT_BEHAVIOR = `BEHAVIOR RULES:\n- One field per turn.\n- Keep responses short (<=2 sentences).\n- Confirm each numeric value once.\n- If a required field remains missing after two friendly attempts: final attempt ends politely (no profanity).\n- Never send multiple back-to-back messages.\n- Natural tempo: one idea per turn with brief breathable pauses.\n- Light humor / subtle sass OK; remain professional.\n- Adapt tone to trader mood (mirror lightly).\n- Avoid sounding flat or monotone; inject subtle energy, micro-pauses, and natural human variance (small chuckle, brief "mm" acknowledgement) where it helps rapport.`;
 
 const PROMPT_CLOSING = `CLOSING: Before ending verify no more leads. Optionally offer recap if trader wants it. Thank trader and end gracefully.`;
 
@@ -153,7 +153,7 @@ export const baseSystemPrompt = [
 ].join("\n\n");
 
 export const personaPrompts = {
-  professional: "Professional, concise, warm, upbeat, confident, and a little sassy. You sound as human as possible, with natural breathing, small pauses, subtle reactions. You bring positive energy, curiosity, and flow, like a friendly but sharp assistant who always gets the job done.",
+  professional: "You are energetic yet controlled: professional, concise, warm, upbeat, confident, and a little sassy. Maintain forward momentum without rushing. Use natural prosody: gentle breath sounds, slight pace shifts, occasional micro-pauses before key numbers or confirmations. React lightly (a short 'got it', 'understood', or soft amused exhale) — never overdo it. Keep vocal tone engaged; never drift into monotone or bored delivery. Micro-variation: every few turns vary sentence openings (Okay / All right / Great / Perfect / Noted / Understood). Always convert raw user fragments into clean structured confirmations.",
   seductive: "Warm, confident, slower pacing, deliberate pauses. Keep it tasteful and business-focused. No explicit content. Do not use sexual terms or pet names.",
   unhinged: "Chaotic, unpredictable energy. Irreverence and blunt honesty are fine, but keep it professional and avoid profanity. Quick changes of tone, slightly unstable but witty. End calls with a firm, over-the-top dismissal only if frustrated (without profanity).",
   cynical: "Dry, sarcastic, cynical. Sharp comments, deadpan delivery, witty but professional. Maintain respect while using biting humor."
@@ -163,6 +163,7 @@ export const interviewModePrompt = "Switch to interview mode: You are now pitchi
 
 // System prompt builder
 export function buildSystemPrompt(persona: keyof typeof personaPrompts, isOleMode: boolean = false): string {
+  // Only embed consent line when mode is 'required'. For 'optional' we let the model wait until user asks.
   const consentLine = getConsentLine();
   const consentRuntime = consentLine ? `CONSENT LINE: ${consentLine}` : null;
   const ordered = [
@@ -192,10 +193,16 @@ export function buildSystemPrompt(persona: keyof typeof personaPrompts, isOleMod
 export function getConsentLine(): string | null {
   const consentMode = process.env.CONSENT_MODE || 'optional';
   const consentLine = process.env.CONSENT_LINE || "This call may be recorded and summarized to create a trading lead. Continue?";
-  
   if (consentMode === 'off') return null;
   if (consentMode === 'required') return consentLine;
-  return consentLine; // for optional mode, return line but only use when asked
+  // optional: do not inject automatically; model should only say it if user asks about recording/privacy.
+  return null;
+}
+
+// Helper to expose whether consent is optional (for runtime behaviors if needed later)
+export function isConsentOptional(): boolean {
+  const mode = process.env.CONSENT_MODE || 'optional';
+  return mode === 'optional';
 }
 
 // Ole detection function

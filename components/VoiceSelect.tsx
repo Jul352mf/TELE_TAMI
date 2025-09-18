@@ -1,9 +1,8 @@
 "use client";
 
-type VoiceOption = {
-  id: string;
-  label: string;
-};
+import { Select, SelectItem } from "@/components/ui/select";
+
+type VoiceOption = { id: string; label: string };
 
 export default function VoiceSelect({
   value,
@@ -21,19 +20,10 @@ export default function VoiceSelect({
   ];
 
   return (
-  <div className="flex flex-col gap-2 min-w-[200px]">
-      <label className="text-sm font-medium text-muted-foreground">Voice</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="px-3 py-2 border border-border rounded-md bg-background text-foreground"
-      >
-        {voices.map((v) => (
-          <option key={v.id} value={v.id}>
-            {v.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    <Select label="Voice" value={value} onValueChange={(v) => onChange(v)}>
+      {voices.map(v => (
+        <SelectItem key={v.id} value={v.id}>{v.label}</SelectItem>
+      ))}
+    </Select>
   );
 }
