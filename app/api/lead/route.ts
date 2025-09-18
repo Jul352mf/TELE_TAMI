@@ -41,16 +41,38 @@ export async function POST(request: NextRequest) {
         to: process.env.LEADS_EMAIL,
         message: {
           subject: `New Lead: ${lead.side} ${lead.product} @ ${lead.price.amount} ${lead.price.currency}/${lead.price.per}`,
-          html: `<p>New lead captured.</p>
-<p><b>${lead.side}</b> ${lead.product}</p>
-<p>Price: ${lead.price.amount} ${lead.price.currency}/${lead.price.per}</p>
-<p>Qty: ${lead.quantity.amount} ${lead.quantity.unit}</p>
-<p>Terms: ${lead.paymentTerms}, ${lead.incoterm}</p>
-<p>Locations: loading=${lead.loadingLocation||"-"} (${lead.loadingCountry||"-"}), delivery=${lead.deliveryLocation||"-"} (${lead.deliveryCountry||"-"}), port=${lead.port||"-"}</p>
-<p>More: packaging=${lead.packaging||"-"}, transport=${lead.transportMode||"-"}, validity=${lead.priceValidity||"-"}, availTime=${lead.availabilityTime||"-"}, availQty=${lead.availabilityQty||"-"}, delivery=${lead.deliveryTimeframe||"-"}</p>
-<p>Summary: ${lead.summary||"-"}</p>
-<p>Special Notes: ${lead.specialNotes||lead.notes||"-"}</p>
-<p><a href="https://console.firebase.google.com/">Open Console</a></p>`
+          html: `
+<div style="font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background:#0b0b0b; color:#eaeaea; padding:24px;">
+  <div style="max-width:720px; margin:0 auto; background:#111; border:1px solid #222; border-radius:12px; overflow:hidden;">
+    <div style="padding:20px 24px; border-bottom:1px solid #222;">
+      <h2 style="margin:0; font-size:18px;">New Trading Lead</h2>
+      <p style="margin:4px 0 0 0; color:#aaa;">Captured by TAMI</p>
+    </div>
+    <div style="padding:16px 24px;">
+      <table style="width:100%; border-collapse: collapse;">
+        <tbody>
+          <tr><td style="padding:8px 0; color:#999;">Side</td><td style="padding:8px 0;">${lead.side}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Product</td><td style="padding:8px 0;">${lead.product}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Price</td><td style="padding:8px 0;">${lead.price.amount} ${lead.price.currency}/${lead.price.per}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Quantity</td><td style="padding:8px 0;">${lead.quantity.amount} ${lead.quantity.unit}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Terms</td><td style="padding:8px 0;">${lead.paymentTerms}, ${lead.incoterm}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Locations</td><td style="padding:8px 0;">loading=${lead.loadingLocation||"-"} (${lead.loadingCountry||"-"}), delivery=${lead.deliveryLocation||"-"} (${lead.deliveryCountry||"-"}), port=${lead.port||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Packaging</td><td style="padding:8px 0;">${lead.packaging||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Transport</td><td style="padding:8px 0;">${lead.transportMode||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Validity</td><td style="padding:8px 0;">${lead.priceValidity||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Availability</td><td style="padding:8px 0;">${lead.availabilityTime||"-"} / ${lead.availabilityQty||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Delivery</td><td style="padding:8px 0;">${lead.deliveryTimeframe||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Summary</td><td style="padding:8px 0;">${lead.summary||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Notes</td><td style="padding:8px 0;">${lead.specialNotes||lead.notes||"-"}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:16px 24px; border-top:1px solid #222; color:#999;">
+      <p style="margin:0;">Regards,<br/>TAMI · TELE TAMI</p>
+      <p style="margin:8px 0 0 0;"><a href="https://console.firebase.google.com/" style="color:#6dd5ff; text-decoration:none;">Open Firebase Console</a></p>
+    </div>
+  </div>
+</div>`
         }
       };
 
@@ -62,16 +84,38 @@ export async function POST(request: NextRequest) {
       to: process.env.LEADS_EMAIL,
       message: {
         subject: `New Lead: ${lead.side} ${lead.product} @ ${lead.price.amount} ${lead.price.currency}/${lead.price.per}`,
-        html: `<p>New lead captured.</p>
-<p><b>${lead.side}</b> ${lead.product}</p>
-<p>Price: ${lead.price.amount} ${lead.price.currency}/${lead.price.per}</p>
-<p>Qty: ${lead.quantity.amount} ${lead.quantity.unit}</p>
-<p>Terms: ${lead.paymentTerms}, ${lead.incoterm}</p>
-<p>Locations: loading=${lead.loadingLocation||"-"} (${lead.loadingCountry||"-"}), delivery=${lead.deliveryLocation||"-"} (${lead.deliveryCountry||"-"}), port=${lead.port||"-"}</p>
-<p>More: packaging=${lead.packaging||"-"}, transport=${lead.transportMode||"-"}, validity=${lead.priceValidity||"-"}, availTime=${lead.availabilityTime||"-"}, availQty=${lead.availabilityQty||"-"}, delivery=${lead.deliveryTimeframe||"-"}</p>
-<p>Summary: ${lead.summary||"-"}</p>
-<p>Special Notes: ${lead.specialNotes||lead.notes||"-"}</p>
-<p><a href="https://console.firebase.google.com/">Open Console</a></p>`
+        html: `
+<div style="font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background:#0b0b0b; color:#eaeaea; padding:24px;">
+  <div style="max-width:720px; margin:0 auto; background:#111; border:1px solid #222; border-radius:12px; overflow:hidden;">
+    <div style="padding:20px 24px; border-bottom:1px solid #222;">
+      <h2 style="margin:0; font-size:18px;">New Trading Lead</h2>
+      <p style="margin:4px 0 0 0; color:#aaa;">Captured by TAMI</p>
+    </div>
+    <div style="padding:16px 24px;">
+      <table style="width:100%; border-collapse: collapse;">
+        <tbody>
+          <tr><td style="padding:8px 0; color:#999;">Side</td><td style="padding:8px 0;">${lead.side}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Product</td><td style="padding:8px 0;">${lead.product}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Price</td><td style="padding:8px 0;">${lead.price.amount} ${lead.price.currency}/${lead.price.per}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Quantity</td><td style="padding:8px 0;">${lead.quantity.amount} ${lead.quantity.unit}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Terms</td><td style="padding:8px 0;">${lead.paymentTerms}, ${lead.incoterm}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Locations</td><td style="padding:8px 0;">loading=${lead.loadingLocation||"-"} (${lead.loadingCountry||"-"}), delivery=${lead.deliveryLocation||"-"} (${lead.deliveryCountry||"-"}), port=${lead.port||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Packaging</td><td style="padding:8px 0;">${lead.packaging||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Transport</td><td style="padding:8px 0;">${lead.transportMode||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Validity</td><td style="padding:8px 0;">${lead.priceValidity||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Availability</td><td style="padding:8px 0;">${lead.availabilityTime||"-"} / ${lead.availabilityQty||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Delivery</td><td style="padding:8px 0;">${lead.deliveryTimeframe||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Summary</td><td style="padding:8px 0;">${lead.summary||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Notes</td><td style="padding:8px 0;">${lead.specialNotes||lead.notes||"-"}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:16px 24px; border-top:1px solid #222; color:#999;">
+      <p style="margin:0;">Regards,<br/>TAMI · TELE TAMI</p>
+      <p style="margin:8px 0 0 0;"><a href="https://console.firebase.google.com/" style="color:#6dd5ff; text-decoration:none;">Open Firebase Console</a></p>
+    </div>
+  </div>
+</div>`
       }
     };
     

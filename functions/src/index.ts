@@ -77,14 +77,40 @@ export const onLeadCreate = onDocumentCreated("leads/{leadId}", async (event) =>
 
     // Append to Leads sheet
     console.log(`Appending lead ${event.params.leadId} to spreadsheet ${spreadsheetId} range Leads!A:Z`);
-    await sheets.spreadsheets.values.append({
-      spreadsheetId,
-  range: "Leads!A:Z",
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values }
-    });
-
-    console.log(`Successfully appended lead ${event.params.leadId} to Google Sheets`);
+    const maxRetries = 3;
+    let attempt = 0;
+    let success = false;
+    let lastError: any = null;
+    while (attempt < maxRetries && !success) {
+      try {
+        attempt++;
+        await sheets.spreadsheets.values.append({
+          spreadsheetId,
+          range: "Leads!A:Z",
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values }
+        });
+        success = true;
+        console.log(`Sheets append success (attempt ${attempt}) for ${event.params.leadId}`);
+      } catch (err) {
+        lastError = err;
+        const waitMs = Math.min(8000, 500 * Math.pow(2, attempt - 1));
+        console.warn(`Sheets append failed (attempt ${attempt}) for ${event.params.leadId}. Retrying in ${waitMs}ms...`);
+        await new Promise((res) => setTimeout(res, waitMs));
+      }
+    }
+    if (!success) {
+      console.error(`Sheets append failed after ${maxRetries} attempts for ${event.params.leadId}`);
+      const errAny = lastError as any;
+      if (errAny?.response) {
+        console.error("Sheets API error status:", errAny.response.status);
+        try {
+          console.error("Sheets API error body:", JSON.stringify(errAny.response.data));
+        } catch {
+          console.error("Sheets API error body (raw):", errAny.response.data);
+        }
+      }
+    }
 
   } catch (error) {
     console.error("Error appending to Google Sheets:", (error as any)?.message || error);

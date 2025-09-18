@@ -8,6 +8,7 @@ import CallButton from "./CallButton";
 import Controls from "./Controls";
 import Messages from "./Messages";
 import { recordLeadTool } from "@/lib/hume";
+import VoiceSelect from "./VoiceSelect";
 
 export default function TeleTami({
   accessToken,
@@ -16,6 +17,7 @@ export default function TeleTami({
 }) {
   const [persona, setPersona] = useState<"professional" | "seductive" | "unhinged" | "cynical">("professional");
   const [spicyMode, setSpicyMode] = useState(false);
+  const [voiceId, setVoiceId] = useState<string>("default");
   const timeout = useRef<number | null>(null);
   const ref = useRef<ComponentRef<typeof Messages> | null>(null);
 
@@ -98,13 +100,14 @@ export default function TeleTami({
         }}
       >
         {/* Header with persona controls */}
-        <div className="absolute top-4 right-4 z-10">
+        <div className="absolute top-4 right-4 z-10 flex flex-col gap-3 items-end">
           <PersonaToggle
             value={persona}
             onChange={setPersona}
             spicyMode={spicyMode}
             onSpicyModeChange={setSpicyMode}
           />
+          <VoiceSelect value={voiceId} onChange={setVoiceId} />
         </div>
 
         <Messages ref={ref} />
@@ -113,6 +116,7 @@ export default function TeleTami({
           accessToken={accessToken}
           persona={persona}
           spicyMode={spicyMode}
+          voiceId={voiceId}
           onToolCall={handleToolCall}
         />
       </VoiceProvider>

@@ -12,6 +12,7 @@ interface CallButtonProps {
   accessToken: string;
   persona: "professional" | "seductive" | "unhinged" | "cynical";
   spicyMode: boolean;
+  voiceId?: string;
   onToolCall: (name: string, args: any) => Promise<void>;
 }
 
@@ -19,6 +20,7 @@ export default function CallButton({
   accessToken,
   persona,
   spicyMode,
+  voiceId,
   onToolCall,
 }: CallButtonProps) {
   const { status, connect, messages, sendSessionSettings } = useVoice();
@@ -93,6 +95,9 @@ export default function CallButton({
                       parameters: JSON.stringify(recordLeadTool.parameters),
                     },
                   ],
+                  // If Hume supports setting voice via session settings, include it here
+                  // This will be ignored by the backend if unsupported
+                  voice: voiceId && voiceId !== "default" ? { id: voiceId } : undefined,
                 };
 
                 connect({
