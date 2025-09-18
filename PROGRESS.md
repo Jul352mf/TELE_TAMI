@@ -20,16 +20,16 @@ Date: 2025-09-18
 - Email: Upgraded HTML template (dark styled, table of fields).
 - UI: Settings cluster repositioned; GitHub star removed; spacing refined; added model & voice dropdowns.
 - Tests: Existing prompt tests pass; pending expanded coverage (sanitize, timers) – not yet implemented.
-- Docs: Audit created (`AUDIT.md`); PROGRESS updated; further structured prompt plan pending.
+- Docs: Audit created (`AUDIT.md`); modular prompt builder implemented (segmented in `lib/hume.ts`); PROGRESS updated.
 - Commits: Multiple feature commits pushed to `pr-1` (prompts, persona, voice/model, timers, audit).
 
 ## Next Steps
 
-1. Structured prompt builder (modular sections) & ephemeral lead capture design.
-2. Consent line runtime injection if `CONSENT_MODE=required`.
-3. Optional local persistence for voice/model selections & last persona.
-4. Expand tool set (incremental lead operations) behind a feature flag.
-5. Add tests for: `sanitizeForHume`, timers logic, Sheets retry backoff.
+1. Ephemeral lead draft state provider (client only) – scaffold.
+2. Consent line runtime injection (partially added in builder – verify env gating & first-turn behavior).
+3. Optional local persistence for voice/model/persona selections.
+4. Incremental lead tool set (add/update/finalize) behind feature flag.
+5. Add tests: `sanitizeForHume`, timers logic, Sheets retry backoff, prompt composition snapshot.
 6. Implement retention sweep logic or remove stub.
 
 ## Notes
