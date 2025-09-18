@@ -5,10 +5,12 @@ import { AnimatePresence, motion } from "motion/react";
 import { Button } from "./ui/button";
 import { Phone } from "lucide-react";
 import { toast } from "sonner";
-import { recordLeadTool, buildSystemPrompt, detectOleMode, addOrUpdateLeadFieldTool, finalizeLeadDraftTool, getMissingFieldsTool, getDraftSummaryTool, confirmFieldValueTool } from "@/lib/hume";
+import { recordLeadTool, buildSystemPrompt, detectOleMode } from "@/lib/hume";
+import { buildHumeToolsPayload } from "@/lib/toolRegistry";
 import { emit } from "@/utils/telemetry";
 import { useState, useEffect } from "react";
 import { useLeadDraft } from "@/components/LeadDraftProvider";
+import { normalizeLeadPayload, parsePrice, parseQuantity } from '@/utils/parsers';
 
 interface CallButtonProps {
   accessToken: string;
@@ -87,11 +89,11 @@ export default function CallButton({
             return;
           }
           // Synthesize payload shaped like recordLead expects (best-effort)
-          const payload = {
+          const rawPayload = {
             side: (draft as any)?.side,
             product: (draft as any)?.product,
-            price: { amount: (draft as any)?.price?.amount || (draft as any)?.price, currency: 'USD', per: 'mt' },
-            quantity: { amount: (draft as any)?.quantity?.amount || (draft as any)?.quantity, unit: 'mt' },
+            price: (draft as any)?.price,
+            quantity: (draft as any)?.quantity,
             paymentTerms: (draft as any)?.paymentTerms,
             incoterm: (draft as any)?.incoterm,
             loadingLocation: (draft as any)?.loadingLocation,
@@ -109,6 +111,7 @@ export default function CallButton({
             specialNotes: (draft as any)?.specialNotes,
             traderName: (draft as any)?.traderName,
           };
+          const payload = normalizeLeadPayload(rawPayload);
           await onToolCall('recordLead', payload);
           clearDraft();
           return;
@@ -130,48 +133,7 @@ export default function CallButton({
         <Button
           className="flex items-center gap-1.5 rounded-full px-8 py-4 text-lg shadow-md"
           onClick={() => {
-                const tools: any[] = [
-                  {
-                    type: "function" as const,
-                    name: recordLeadTool.name,
-                    description: recordLeadTool.description,
-                    parameters: JSON.stringify(recordLeadTool.parameters),
-                  },
-                ];
-                if (process.env.NEXT_PUBLIC_INCREMENTAL_LEADS === '1') {
-                  tools.push(
-                    {
-                      type: 'function',
-                      name: addOrUpdateLeadFieldTool.name,
-                      description: addOrUpdateLeadFieldTool.description,
-                      parameters: JSON.stringify(addOrUpdateLeadFieldTool.parameters)
-                    },
-                    {
-                      type: 'function',
-                      name: finalizeLeadDraftTool.name,
-                      description: finalizeLeadDraftTool.description,
-                      parameters: JSON.stringify(finalizeLeadDraftTool.parameters)
-                    },
-                    {
-                      type: 'function',
-                      name: getMissingFieldsTool.name,
-                      description: getMissingFieldsTool.description,
-                      parameters: JSON.stringify(getMissingFieldsTool.parameters)
-                    },
-                    {
-                      type: 'function',
-                      name: getDraftSummaryTool.name,
-                      description: getDraftSummaryTool.description,
-                      parameters: JSON.stringify(getDraftSummaryTool.parameters)
-                    },
-                    {
-                      type: 'function',
-                      name: confirmFieldValueTool.name,
-                      description: confirmFieldValueTool.description,
-                      parameters: JSON.stringify(confirmFieldValueTool.parameters)
-                    }
-                  );
-                }
+                const tools = buildHumeToolsPayload(process.env.NEXT_PUBLIC_INCREMENTAL_LEADS === '1');
 
                 const sessionSettings = {
                   type: "session_settings" as const,

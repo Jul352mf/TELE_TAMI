@@ -8,6 +8,7 @@ import CallButton from "./CallButton";
 import Controls from "./Controls";
 import Messages from "./Messages";
 import { recordLeadTool } from "@/lib/hume";
+import { toolSuccess, toolError } from "@/lib/toolRegistry";
 import VoiceSelect from "./VoiceSelect";
 import SessionTimers from "./SessionTimers";
 import ModelSelect from "./ModelSelect";
@@ -143,23 +144,21 @@ export default function TeleTami({ accessToken }: { accessToken: string }) {
         toast.error(error.message);
       }}
       onToolCall={async (message, send) => {
+        const name = message.name;
+        let args: any = {};
         try {
-          const name = message.name;
-          let args: any = {};
-          try {
-            args = message.parameters ? JSON.parse(message.parameters as unknown as string) : {};
-          } catch {
-            args = {};
-          }
+          args = message.parameters ? JSON.parse(message.parameters as unknown as string) : {};
+        } catch { args = {}; }
+        try {
           await handleToolCall(name, args);
-          return send.success(JSON.stringify({ ok: true }));
+          return send.success(toolSuccess(name));
         } catch (e: any) {
           console.error('Tool call handler error:', e);
           return send.error({
             error: 'tool_error',
             code: 'LEAD_CAPTURE_FAILED',
             level: 'warn',
-            content: e?.message || 'failed',
+            content: toolError(name, e?.message || 'failed', 'LEAD_CAPTURE_FAILED'),
           });
         }
       }}
