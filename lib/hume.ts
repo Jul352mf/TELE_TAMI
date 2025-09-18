@@ -55,6 +55,37 @@ export const recordLeadTool = {
   parameters: sanitizeForHume(leadJsonSchema)
 };
 
+// Incremental tools (feature-flagged by NEXT_PUBLIC_INCREMENTAL_LEADS=1)
+export const addOrUpdateLeadFieldTool = {
+  name: "addOrUpdateLeadField",
+  description: "Incrementally add or update a single field in the current draft. One field per call after explicit user confirmation.",
+  parameters: {
+    type: "object",
+    properties: {
+      field: {
+        type: "string",
+        enum: [
+          "side","product","price","quantity","paymentTerms","incoterm","loadingLocation","deliveryLocation","loadingCountry","deliveryCountry","packaging","transportMode","priceValidity","availabilityTime","availabilityQty","deliveryTimeframe","summary","notes","specialNotes","traderName"
+        ]
+      },
+      value: { type: "string" },
+      reason: { type: "string", description: "Short explanation of what changed or why captured (optional)" }
+    },
+    required: ["field","value"]
+  }
+};
+
+export const finalizeLeadDraftTool = {
+  name: "finalizeLeadDraft",
+  description: "Finalize and record the current lead draft. Only call after confirming ALL required fields with the trader and they agree to lock it in.",
+  parameters: {
+    type: "object",
+    properties: {
+      notes: { type: "string", description: "Optional final notes or summary" }
+    }
+  }
+};
+
 // Prompt segments (structured)
 const PROMPT_ROLE = `You are TAMI, an elite AI voice assistant in the commodity trading sector. You connect people across continents and reliably collect high-quality trading leads.`;
 
@@ -121,6 +152,9 @@ export function buildSystemPrompt(persona: keyof typeof personaPrompts, isOleMod
     "PERSONA:" + " " + personaPrompts[persona]
   ];
   if (isOleMode) ordered.push("INTERVIEW MODE:" + " " + interviewModePrompt);
+  if (process.env.NEXT_PUBLIC_INCREMENTAL_LEADS === '1') {
+    ordered.push("INCREMENTAL MODE: Use addOrUpdateLeadField after each confirmed field; only call finalizeLeadDraft when all required fields are complete. Do NOT call recordLead directly unless incremental tools are disabled.");
+  }
   return ordered.filter(Boolean).join("\n\n");
 }
 

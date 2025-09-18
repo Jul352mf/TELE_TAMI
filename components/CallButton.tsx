@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Button } from "./ui/button";
 import { Phone } from "lucide-react";
 import { toast } from "sonner";
-import { recordLeadTool, buildSystemPrompt, detectOleMode } from "@/lib/hume";
+import { recordLeadTool, buildSystemPrompt, detectOleMode, addOrUpdateLeadFieldTool, finalizeLeadDraftTool } from "@/lib/hume";
 import { emit } from "@/utils/telemetry";
 import { useState, useEffect } from "react";
 
@@ -44,20 +44,30 @@ export default function CallButton({
   }, [messages, isOleMode]);
 
   const handleToolCall = async (name: string, args: any) => {
-    if (name === "recordLead") {
-      try {
+    try {
+      if (name === "recordLead") {
         const payload = {
           ...args,
           persona: isOleMode ? "interview" : persona,
           traderHint: isOleMode ? "Ole detected" : null,
           sourceCallId: sessionId,
         };
-        
         await onToolCall(name, payload);
-      } catch (error) {
-        console.error("Error in tool call handler:", error);
-        toast.error("Failed to process tool call");
+        return;
       }
+      if (name === 'addOrUpdateLeadField') {
+        // For now just log; future: integrate with draft context (already available higher in tree)
+        console.log('[incremental] field update', args);
+        return;
+      }
+      if (name === 'finalizeLeadDraft') {
+        console.log('[incremental] finalize draft request', args);
+        // Eventually will assemble draft & call recordLead automatically client-side
+        return;
+      }
+    } catch (error) {
+      console.error("Error in tool call handler:", error);
+      toast.error("Failed to process tool call");
     }
   };
 
@@ -89,17 +99,35 @@ export default function CallButton({
             <Button
               className="z-50 flex items-center gap-1.5 rounded-full px-8 py-4 text-lg shadow-lg"
               onClick={() => {
+                const tools: any[] = [
+                  {
+                    type: "function" as const,
+                    name: recordLeadTool.name,
+                    description: recordLeadTool.description,
+                    parameters: JSON.stringify(recordLeadTool.parameters),
+                  },
+                ];
+                if (process.env.NEXT_PUBLIC_INCREMENTAL_LEADS === '1') {
+                  tools.push(
+                    {
+                      type: 'function',
+                      name: addOrUpdateLeadFieldTool.name,
+                      description: addOrUpdateLeadFieldTool.description,
+                      parameters: JSON.stringify(addOrUpdateLeadFieldTool.parameters)
+                    },
+                    {
+                      type: 'function',
+                      name: finalizeLeadDraftTool.name,
+                      description: finalizeLeadDraftTool.description,
+                      parameters: JSON.stringify(finalizeLeadDraftTool.parameters)
+                    }
+                  );
+                }
+
                 const sessionSettings = {
                   type: "session_settings" as const,
                   systemPrompt: systemPrompt,
-                  tools: [
-                    {
-                      type: "function" as const,
-                      name: recordLeadTool.name,
-                      description: recordLeadTool.description,
-                      parameters: JSON.stringify(recordLeadTool.parameters),
-                    },
-                  ],
+                  tools,
                   // If Hume supports setting voice via session settings, include it here
                   // This will be ignored by the backend if unsupported
                   voice: voiceId && voiceId !== "default" ? { id: voiceId } : undefined,
