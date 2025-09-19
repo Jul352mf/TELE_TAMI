@@ -135,6 +135,7 @@ export const onLeadCreate = onDocumentCreated("leads/{leadId}", async (event) =>
  */
 export const retentionSweep = onSchedule("0 2 * * *", async (context) => {
   const retentionDays = parseInt(process.env.RETENTION_DAYS || "-1");
+  const dryRun = (process.env.RETENTION_DRY_RUN || '').toLowerCase() === 'true';
   
   if (retentionDays === -1) {
     console.log("Retention sweep: RETENTION_DAYS is -1, skipping cleanup");
@@ -152,8 +153,10 @@ export const retentionSweep = onSchedule("0 2 * * *", async (context) => {
     // Prefer explicit createdAt field
     const snapshot = await leadsRef.get();
     let examined = 0;
-    let deletedLinks = 0;
-    let updatedDocs = 0;
+  let deletedLinks = 0;
+  let updatedDocs = 0;
+  let wouldDeleteLinks = 0;
+  let wouldUpdateDocs = 0;
     const bucket = admin.storage().bucket();
 
     for (const doc of snapshot.docs) {
@@ -177,7 +180,6 @@ export const retentionSweep = onSchedule("0 2 * * *", async (context) => {
       ];
       for (const mf of mediaFields) {
         if (mf.url && typeof mf.url === 'string') {
-          // Expecting a gs:// or https://storage.googleapis.com/<bucket>/<path>
           try {
             let path: string | null = null;
             if (mf.url.startsWith('gs://')) {
@@ -191,22 +193,36 @@ export const retentionSweep = onSchedule("0 2 * * *", async (context) => {
               }
             }
             if (path) {
-              await bucket.file(path).delete({ ignoreNotFound: true });
-              deletedLinks++;
-              updates[mf.key] = admin.firestore.FieldValue.delete();
+              if (dryRun) {
+                wouldDeleteLinks++;
+                updates[mf.key] = '__DRY_RUN_DELETE__';
+                console.log(`[DRY_RUN] Would delete file: ${path} for doc ${doc.id} (${mf.key})`);
+              } else {
+                await bucket.file(path).delete({ ignoreNotFound: true });
+                deletedLinks++;
+                updates[mf.key] = admin.firestore.FieldValue.delete();
+              }
             }
           } catch (e) {
-            console.warn('Failed deleting media for', doc.id, mf.key, (e as any)?.message || e);
+            console.warn(dryRun ? '[DRY_RUN] Failed simulated delete for' : 'Failed deleting media for', doc.id, mf.key, (e as any)?.message || e);
           }
         }
       }
       if (Object.keys(updates).length) {
-        await doc.ref.update(updates);
-        updatedDocs++;
+        if (dryRun) {
+          wouldUpdateDocs++;
+          console.log(`[DRY_RUN] Would update doc ${doc.id} removing media fields: ${Object.keys(updates).join(', ')}`);
+        } else {
+          await doc.ref.update(updates);
+          updatedDocs++;
+        }
       }
     }
-
-    console.log(`Retention sweep summary: examined=${examined} mediaDeleted=${deletedLinks} docsUpdated=${updatedDocs}`);
+    if (dryRun) {
+      console.log(`Retention sweep DRY_RUN summary: examined=${examined} mediaWouldDelete=${wouldDeleteLinks} docsWouldUpdate=${wouldUpdateDocs}`);
+    } else {
+      console.log(`Retention sweep summary: examined=${examined} mediaDeleted=${deletedLinks} docsUpdated=${updatedDocs}`);
+    }
   } catch (error) {
     console.error("Error during retention sweep:", error);
   }

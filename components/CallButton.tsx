@@ -7,6 +7,7 @@ import { Phone } from "lucide-react";
 import { toast } from "sonner";
 import { recordLeadTool, buildSystemPrompt, detectOleMode } from "@/lib/hume";
 import { buildHumeToolsPayload } from "@/lib/toolRegistry";
+import { normalizeModelId } from "@/lib/models";
 import { emit } from "@/utils/telemetry";
 import { useState, useEffect } from "react";
 import { useLeadDraft } from "@/components/LeadDraftProvider";
@@ -134,6 +135,7 @@ export default function CallButton({
           className="flex items-center gap-1.5 rounded-full px-8 py-4 text-lg shadow-md"
           onClick={() => {
                 const tools = buildHumeToolsPayload(process.env.NEXT_PUBLIC_INCREMENTAL_LEADS === '1');
+                const { id: resolvedModel, changed } = normalizeModelId(modelId);
 
                 const sessionSettings = {
                   type: "session_settings" as const,
@@ -142,7 +144,7 @@ export default function CallButton({
                   // If Hume supports setting voice via session settings, include it here
                   // This will be ignored by the backend if unsupported
                   voice: voiceId && voiceId !== "default" ? { id: voiceId } : undefined,
-                  model: modelId && modelId !== "hume-evi-3" ? { id: modelId } : undefined,
+                  model: resolvedModel !== 'hume-evi-3' ? { id: resolvedModel } : undefined,
                 };
 
                 connect({
@@ -154,8 +156,11 @@ export default function CallButton({
                     console.log("Connected with persona:", effectivePersona);
                     console.log("System prompt:", systemPrompt);
                     console.log("Voice ID:", voiceId || "(default)");
-                    console.log("Model ID:", modelId || "hume-evi-3");
-                    emit({ type: 'session_connected', model: modelId || 'hume-evi-3', voice: voiceId || 'default' });
+                    if (changed) {
+                      console.warn(`Unsupported model '${modelId}' selected; falling back to 'hume-evi-3'`);
+                    }
+                    console.log("Model ID:", resolvedModel);
+                    emit({ type: 'session_connected', model: resolvedModel, voice: voiceId || 'default' });
                     if (systemPrompt.includes('CONSENT LINE:')) {
                       emit({ type: 'consent_injected' });
                     }

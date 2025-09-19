@@ -44,6 +44,50 @@ Required environment variables (see `.env.example`):
 - `GOOGLE_SHEETS_ID` - Google Sheets spreadsheet ID
 - `GOOGLE_SERVICE_ACCOUNT_JSON` - Service account credentials (JSON)
 
+### Feature Flags & Extended Environment Variables
+
+These flags control optional or experimental behavior. Unless noted as `public`, they are server-side only.
+
+| Variable | Scope | Values / Format | Default | Purpose |
+|----------|-------|-----------------|---------|---------|
+| `NEXT_PUBLIC_INCREMENTAL_LEADS` | public | `1` \| unset | unset (off) | Enables incremental lead tools (add/update single field, confirm, summarize, get missing fields) instead of single final `recordLead` call only. |
+| `CONSENT_MODE` | server | `required` \| `optional` \| `off` | `optional` | Governs if consent line is auto-spoken (`required`), only on user inquiry (`optional`), or entirely disabled (`off`). |
+| `CONSENT_LINE` | server | Free text string | Built-in default line | Override the spoken consent sentence when `CONSENT_MODE=required`. Ignored when `off`; not auto-injected when `optional`. |
+| `RETENTION_DAYS` | server | Integer (e.g. `30`, `7`, `-1`) | `-1` | Age threshold (in days) to purge media links (audio/transcripts). `-1` disables cleanup. |
+| `RETENTION_DRY_RUN` | server | `true` \| `false` | `false` | When `true`, retention sweep only logs what would be deleted/updated—no storage or Firestore mutations. Safe mode for validation. |
+| `HUME_MODEL` | public/server | Model identifier | Hume default | (If supported) select alternate EVI model variant. |
+| `NEXT_PUBLIC_DEFAULT_VOICE_ID` | public | Voice ID | internal default | Pre-select a specific voice in the UI. |
+| `LEADS_EMAIL` | server | Email address | none | Target for notification / extension triggers. |
+
+### Behavior Notes
+
+- Incremental mode (`NEXT_PUBLIC_INCREMENTAL_LEADS=1`) extends the tool list with per-field operations. In off mode only `recordLead` is advertised.
+- In `CONSENT_MODE=optional`, the system will not auto-inject the consent line; model should surface it only if user asks about recording/privacy.
+- Retention sweep executes daily at 02:00 UTC (see `functions/src/index.ts`). Use `RETENTION_DRY_RUN=true` first to verify logs before enabling destructive deletions.
+- Media cleanup removes `audioUrl` / `transcriptUrl` fields and underlying Cloud Storage objects once older than `RETENTION_DAYS`.
+- Setting `RETENTION_DAYS` to a small number (e.g. `1`) in combination with dry-run provides quick validation of logging output.
+
+### Example `.env.local` Snippet
+
+```bash
+HUME_API_KEY=...
+HUME_SECRET_KEY=...
+NEXT_PUBLIC_HUME_API_KEY=...
+CONSENT_MODE=required
+CONSENT_LINE="This call may be recorded for lead creation. Continue?"
+NEXT_PUBLIC_INCREMENTAL_LEADS=1
+RETENTION_DAYS=30
+RETENTION_DRY_RUN=true   # flip to false after verification
+GOOGLE_SHEETS_ID=...
+GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'
+```
+
+### Deployment Tips
+
+- For Firebase Functions secrets (`GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_SHEETS_ID`, etc.) use `firebase functions:secrets:set` rather than committing values.
+- Public (`NEXT_PUBLIC_`) variables must be present at Next.js build time to affect the client bundle.
+- After changing retention flags, redeploy functions to ensure environment refresh.
+
 ## Firebase Setup
 
 1. **Create Firebase Project**

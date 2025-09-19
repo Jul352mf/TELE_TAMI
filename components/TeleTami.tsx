@@ -18,6 +18,7 @@ export default function TeleTami({ accessToken }: { accessToken: string }) {
   const [spicyMode, setSpicyMode] = useState(false);
   const [voiceId, setVoiceId] = useState<string>("default");
   const [modelId, setModelId] = useState<string>("hume-evi-3");
+  const [recipientEmail, setRecipientEmail] = useState<string>("");
 
   // Restore persisted settings
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function TeleTami({ accessToken }: { accessToken: string }) {
           ...args,
           persona: persona,
           traderHint: null, // Will be set by Ole detection logic
+          recipientEmail: recipientEmail?.trim() || undefined,
         };
         
         const response = await fetch("/api/lead", {
@@ -89,14 +91,23 @@ export default function TeleTami({ accessToken }: { accessToken: string }) {
           <div className="w-full max-w-3xl flex flex-col items-center gap-10">
             {/* Top section: Call button */}
             <div className="w-full flex justify-center">
-              <CallButton
-                accessToken={accessToken}
-                persona={persona}
-                spicyMode={spicyMode}
-                voiceId={voiceId}
-                modelId={modelId}
-                onToolCall={handleToolCall}
-              />
+              <div className="flex flex-col items-center gap-3 w-full">
+                <CallButton
+                  accessToken={accessToken}
+                  persona={persona}
+                  spicyMode={spicyMode}
+                  voiceId={voiceId}
+                  modelId={modelId}
+                  onToolCall={handleToolCall}
+                />
+                <input
+                  type="email"
+                  placeholder="Email to receive lead (optional)"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  className="w-full max-w-sm rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
             </div>
             {/* Bottom section: horizontal settings row */}
             <div className="w-full flex flex-wrap justify-center gap-6">
@@ -118,7 +129,7 @@ export default function TeleTami({ accessToken }: { accessToken: string }) {
     return (
       <div className="flex flex-col h-screen w-full">
         <SessionTimers />
-        <div className="flex-1 overflow-hidden px-4 py-4 max-w-5xl w-full mx-auto">
+        <div className="flex-1 min-h-0 px-4 py-4 max-w-5xl w-full mx-auto flex flex-col">
           <Messages ref={ref} />
         </div>
         <div className="border-t border-muted/20" />

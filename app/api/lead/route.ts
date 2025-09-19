@@ -25,11 +25,32 @@ export async function POST(request: NextRequest) {
       traderHint,
       lang: 'en'
     };
+
+    // Build human-friendly locations string (omit empty parts)
+    const locationSegments: string[] = [];
+    const fmtLoc = (label: string, loc?: string | null, country?: string | null) => {
+      if (!loc && !country) return;
+      if (loc && country) {
+        locationSegments.push(`${label}: ${loc} (${country})`);
+      } else if (loc) {
+        locationSegments.push(`${label}: ${loc}`);
+      } else if (country) {
+        locationSegments.push(`${label}: ${country}`);
+      }
+    };
+    fmtLoc('Loading', lead.loadingLocation, lead.loadingCountry);
+    fmtLoc('Delivery', lead.deliveryLocation, lead.deliveryCountry);
+    if (lead.port) locationSegments.push(`Port: ${lead.port}`);
+    const locationsLine = locationSegments.length ? locationSegments.join(' • ') : '-';
     
     // Check if we're in production mode with real Firebase credentials
     const isProduction = process.env.FIREBASE_PROJECT_ID && 
                         !process.env.FIREBASE_PROJECT_ID.includes('demo');
     
+    const toAddress = (normalized.recipientEmail && typeof normalized.recipientEmail === 'string' && normalized.recipientEmail.includes('@'))
+      ? normalized.recipientEmail.trim()
+      : process.env.LEADS_EMAIL;
+
     if (isProduction) {
       const { firestore } = await import('@/lib/firebase');
       const db = firestore();
@@ -38,7 +59,7 @@ export async function POST(request: NextRequest) {
 
       // Create mail document for Firestore Trigger Email extension
       const mailDoc = {
-        to: process.env.LEADS_EMAIL,
+        to: toAddress,
         message: {
           subject: `New Lead: ${lead.side} ${lead.product} @ ${lead.price.amount} ${lead.price.currency}/${lead.price.per}`,
           html: `
@@ -56,7 +77,7 @@ export async function POST(request: NextRequest) {
           <tr><td style="padding:8px 0; color:#999;">Price</td><td style="padding:8px 0;">${lead.price.amount} ${lead.price.currency}/${lead.price.per}</td></tr>
           <tr><td style="padding:8px 0; color:#999;">Quantity</td><td style="padding:8px 0;">${lead.quantity.amount} ${lead.quantity.unit}</td></tr>
           <tr><td style="padding:8px 0; color:#999;">Terms</td><td style="padding:8px 0;">${lead.paymentTerms}, ${lead.incoterm}</td></tr>
-          <tr><td style="padding:8px 0; color:#999;">Locations</td><td style="padding:8px 0;">loading=${lead.loadingLocation||"-"} (${lead.loadingCountry||"-"}), delivery=${lead.deliveryLocation||"-"} (${lead.deliveryCountry||"-"}), port=${lead.port||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Locations</td><td style="padding:8px 0;">${locationsLine}</td></tr>
           <tr><td style="padding:8px 0; color:#999;">Packaging</td><td style="padding:8px 0;">${lead.packaging||"-"}</td></tr>
           <tr><td style="padding:8px 0; color:#999;">Transport</td><td style="padding:8px 0;">${lead.transportMode||"-"}</td></tr>
           <tr><td style="padding:8px 0; color:#999;">Validity</td><td style="padding:8px 0;">${lead.priceValidity||"-"}</td></tr>
@@ -81,7 +102,7 @@ export async function POST(request: NextRequest) {
     
     // Create email document structure (for logging/demo)
     const emailDoc = {
-      to: process.env.LEADS_EMAIL,
+      to: toAddress,
       message: {
         subject: `New Lead: ${lead.side} ${lead.product} @ ${lead.price.amount} ${lead.price.currency}/${lead.price.per}`,
         html: `
@@ -99,7 +120,7 @@ export async function POST(request: NextRequest) {
           <tr><td style="padding:8px 0; color:#999;">Price</td><td style="padding:8px 0;">${lead.price.amount} ${lead.price.currency}/${lead.price.per}</td></tr>
           <tr><td style="padding:8px 0; color:#999;">Quantity</td><td style="padding:8px 0;">${lead.quantity.amount} ${lead.quantity.unit}</td></tr>
           <tr><td style="padding:8px 0; color:#999;">Terms</td><td style="padding:8px 0;">${lead.paymentTerms}, ${lead.incoterm}</td></tr>
-          <tr><td style="padding:8px 0; color:#999;">Locations</td><td style="padding:8px 0;">loading=${lead.loadingLocation||"-"} (${lead.loadingCountry||"-"}), delivery=${lead.deliveryLocation||"-"} (${lead.deliveryCountry||"-"}), port=${lead.port||"-"}</td></tr>
+          <tr><td style="padding:8px 0; color:#999;">Locations</td><td style="padding:8px 0;">${locationsLine}</td></tr>
           <tr><td style="padding:8px 0; color:#999;">Packaging</td><td style="padding:8px 0;">${lead.packaging||"-"}</td></tr>
           <tr><td style="padding:8px 0; color:#999;">Transport</td><td style="padding:8px 0;">${lead.transportMode||"-"}</td></tr>
           <tr><td style="padding:8px 0; color:#999;">Validity</td><td style="padding:8px 0;">${lead.priceValidity||"-"}</td></tr>
