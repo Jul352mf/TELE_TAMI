@@ -1,6 +1,7 @@
-# TELE TAMI – Local Setup & Cloud Deployment Guide
+<!-- ARCHIVED: Superseded by docs/deployment.md and docs/operations.md -->
+# TELE TAMI – Local Setup & Cloud Deployment Guide (Archived)
 
-This guide gets you from fresh clone → local dev → Firebase + Sheets + SendGrid integration. Follow in order; keep `.env.local` safe and never commit secrets.
+This guide is retained for historical reference. For current deployment steps see `docs/deployment.md`.
 
 ## 1) Prerequisites
 - Node.js 18+ (project uses Next.js 14; Functions pin Node 18)

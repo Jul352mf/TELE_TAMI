@@ -1,119 +1,98 @@
-# Codebase Audit (Current Branch: pr-1)
+<!-- THIS FILE WILL BE REPLACED BY docs/architecture.md IN THE NEW DOCS SYSTEM.
+     Retained temporarily as an anchor; do not extend further. -->
 
-Date: 2025-09-18
+# Situation Analysis & Codebase Audit (Superseded Draft)
 
-## Overview
+Date: 2025-09-19
+Current Branch: main
 
-This audit catalogs stubs, inconsistencies, unfinished logic, and potential pitfalls introduced or exposed by recent changes (prompts swap, personas, voice & model selection, timers, Sheets mapping, email template, session grouping).
+## 1. High-Level Product Summary
 
-## Strengths / Recent Improvements
+TELE TAMI is a voice-first lead capture assistant for commodity trading. Users hold a conversational session with an emotionally adaptive AI (Hume EVI). The AI extracts structured lead data and ultimately triggers a single tool call (`recordLead`) that posts a validated JSON to a Next.js API route. In production mode the API persists to Firestore, triggers email via Firestore Trigger Email extension, and a Cloud Function appends a row to Google Sheets. Sessions may include multiple sequential leads (conceptually supported in prompt) though persistence is still single-shot per final lead.
 
-- Unified prompt strategy with multi-lead + closing guidance.
-- Added persona and interview mode switching logic (Ole detection).
-- Configurability: voice + model selectors plumbed through session settings.
-- Session lifecycle UX: inactivity + max duration timers with toasts and hard disconnect.
-- Lead grouping: `sourceCallId` now appended to Sheets.
-- Resilient Sheets writes: retry with exponential backoff.
-- Modern HTML email template (dark-mode friendly) prepared for production.
+## 2. Architecture Overview
 
-## Inconsistencies & Open Items
+- Frontend: Next.js (App Router) + Hume Voice React SDK. UI components manage persona selection, model/voice, timers, and message stream.
+- Backend: Next.js API route `/api/lead` validates incoming tool payload with Ajv schema, conditionally writes Firestore + mail doc + logs.
+- Cloud Functions: `onLeadCreate` appends to Sheets with retry; `retentionSweep` scheduled cleanup (partially implemented, supports dry-run).
+- Data Schema: Constrained commodity lead (CHF only, mt|kg units). Optional extended logistic & contextual fields.
+- Prompt System: Modular constants (`hume.ts`) assembled by `buildSystemPrompt(persona, isOleMode)`; supports incremental tool variants gated by env flag.
+- Tooling: Base tool `recordLead`; incremental & diagnostic tools scaffolded but not yet wired through runtime UI state.
+- Telemetry: Minimal console-based emitter (`utils/telemetry.ts`).
 
-1. Prompt Structure
+## 3. Recent Evolution (Git Log Highlights)
 
-   - Large monolithic `baseSystemPrompt` mixes behavior, flow, compliance, and multi-lead instructions. Future: compose from structured segments (Opening, Flow, Tool Use, Closing, Style, Guardrails) to enable targeted iteration.
-   - Multi-lead + closing flows described, but no dynamic runtime memory layer enforcing per-lead boundaries beyond prompt guidance.
+Chronology (most recent first):
 
-2. Tool Invocation / Lead Lifecycle
+1. Persona prompt adjustments & recipient email override (2025-09-19).
+2. Incremental multi-phase implementation (phase1–phase6) adding: modular prompt, consent + telemetry, draft autosave & persistence of settings, incremental tool scaffolds, query/confirm tools, retention sweep skeleton, evaluation tests, parser improvements, UI modernizations, structured plan & audit.
+3. Initial stable email + Sheets integration (STABLE 1.0 marker 2025-09-18).
+4. Base MVP scaffold (2025-09-17): core EVI integration, Firestore lead creation.
 
-   - Single `recordLead` call assumed at finalization; New_TODOs envisions incremental / streaming capture or richer tool set (confirm item, get open items, etc.). Not yet implemented.
-   - No intermediate local state store tracking partial lead items prior to final record; risk: premature tool call or data loss if session ends unexpectedly.
+## 4. Strengths
 
-3. Voice & Model Routing
+- Modular prompt builder now replaces earlier monolith enabling targeted iteration.
+- Resilient Sheets append with exponential backoff + structured logging.
+- Rich HTML email template; dynamic persona + voice + model selection with persisted UI state.
+- Retention mechanism planned with dry-run safeguard (compliance foresight).
+- Clear phased roadmap captured in `NEW_TODOS_PLAN.md`.
 
-   - Session settings pass `voice` and `model` objects; depends on backend acceptance. No feature flag or fallback if unsupported.
-   - No persistence of chosen voice/model per user across sessions (could use localStorage).
+## 5. Gaps & Risks
 
-4. Session Timers
+| Area | Gap | Impact | Priority |
+|------|-----|--------|----------|
+| Lead Capture Robustness | Single-shot record; no server-side incremental draft | Data loss on abrupt disconnect | High |
+| Incremental Tools | Scaffolded but unused runtime state/logic | Unvalidated design path | Medium |
+| Consent Enforcement | Only prompt-level; no guaranteed runtime injection when required | Compliance risk | High |
+| Observability | Console-only logs; no correlation/session IDs | Harder debugging and tuning | Medium |
+| Retention Sweep | Not fully validated; audio/transcript fields not yet populated | Potential future storage bloat | Medium |
+| Prompt Drift | Many behavioral rules rely on model adherence without telemetry feedback loop | Slower iteration | Medium |
+| Testing Coverage | Limited to schema & parser tests; no integration tests | Undetected regressions | Medium |
+| Sheets Schema Evolution | Manual column sync; no schema version row | Silent mismatches | Low |
 
-   - Client-only enforcement; assistant messaging about timeouts is prompt-driven, not programmatic. If tab sleeps or throttles timers (background), enforcement may delay.
-   - Hard-coded intervals; no env overrides.
+## 6. Open Technical Questions (To Clarify Later)
 
-5. Sheets Integration
+1. Will multi-lead sessions require atomic batch persistence? (Currently only independent single leads.)
+2. Are we moving toward transcript post-processing extraction (Second wave notes) replacing tool confirmation logic? If yes, incremental tools might be deprioritized.
+3. Do we need real-time sentiment signals from Hume vs heuristic lexical analysis? (Triggers closing / de-escalation.)
 
-   - Added `sourceCallId`, but Sheet header must be manually updated (A:AA). No migration script.
-   - Some optional fields may remain empty frequently—consider trimming columns or deriving usage metrics.
-   - Retention sweep stub remains; transcripts/audio references not currently inserted, so GC logic incomplete.
+## 7. Recommended Near-Term Actions
 
-6. Error Handling & Observability
+1. Implement client ephemeral lead store + autosave (already partly planned) with graceful fallback email for partial leads.
+2. Runtime injection of consent line on first assistant turn when `CONSENT_MODE=required` (not just in prompt assembly) and emit telemetry event.
+3. Add correlation ID (UUID v4) per session & per lead; unify in logs, tool payload, email subject suffix.
+4. Introduce lightweight analytics buffer (in-memory ring + periodic dump) for local tuning; later route to Firestore or external telemetry.
+5. Add integration test: simulate POST /api/lead with valid & invalid payloads; snapshot email HTML structure.
+6. Introduce schema version row in Sheets (hidden row 1) + runtime header count check.
 
-   - No central logging abstraction (console only). Consider tagging logs with sessionId/persona for correlation.
-   - Email send path only active in production; demo mode logs HTML blob (fine) but lacks snapshot export for QA.
+## 8. Strategic Options
 
-7. Security & Validation
+Path A: Continue tool-centric incremental capture (fine-grained control, immediate validation).
 
-   - Schema limited to CHF currency and mt/kg units; if expansion required, change implies both schema + prompt updates.
-   - `sanitizeForHume` strips constraints like `minLength`; model may produce underspecified values (e.g., 1-char product names) without post-validation heuristics.
+Path B: Simplify to conversational capture + offline transcript extraction (reduced cognitive load on model; requires robust post-processor pipeline). Suggest piloting B in a parallel branch while hardening A.
 
-8. UI / UX
+## 9. Documentation Work Ahead
 
-   - Settings cluster below call is improved but could benefit from subtle section labeling or compact density toggle.
-   - No loading state or disabled state while connecting.
-   - Micro-copy (tool failure toasts, session end messaging) minimal.
+This file becomes an archived snapshot. A comprehensive documentation suite will move under `docs/` with:
 
-9. Retention & Compliance
+- `overview.md` – product & value proposition
+- `architecture.md` – system, data & runtime flows
+- `prompting.md` – prompt structure, personas, flags
+- `development.md` – local dev, testing, scripts
+- `deployment.md` – Vercel + Firebase + Sheets workflow
+- `operations.md` – retention, consent, telemetry, troubleshooting
+- `template-diff.md` – differences from upstream starter template
+- `roadmap.md` – phases (aligned with NEW_TODOS_PLAN)
+- `changelog.md` – human-friendly highlights (subset of git log)
 
-   - `retentionSweep` stub risks unbounded storage growth once audio/transcripts land.
-   - No consent-mode dynamic insertion beyond prompt suggestion (needs runtime branch inserting `getConsentLine()` if required).
+## 10. Deprecations / Cleanup Targets
 
-10. Testing
+- Remove legacy references to single monolithic prompt in older docs.
+- Consolidate overlapping setup guidance (README vs SETUP_GUIDE) into single canonical `docs/deployment.md`.
 
-- Only prompt-related tests; no unit tests for `sanitizeForHume`, Sheets append resilience, or session timers.
-- No integration test script simulating tool invocation end-to-end.
+## 11. Summary
 
-11. Documentation Drift
-
-- `PROGRESS.md` still has legacy TODO markers that are now complete.
-- `DEVELOPMENT.md` references earlier separation of prompt logic that has since evolved.
-
-12. Performance / Edge Cases
-
-- Reverse scan on messages each second in `SessionTimers` (negligible now, but could optimize by tracking last user timestamp on mutation).
-- Potential race: `sendSessionSettings` immediately after connect; if backend applies initial settings asynchronously, duplication may not be necessary.
-
-## Quick Fix Recommendations (Short Term)
-
-- Add local ephemeral lead state (map of field->value) before final tool call; only call `recordLead` on confirmation or session termination.
-- Implement consent injection in first assistant turn when required.
-- Split system prompt into composable sections exported as constants.
-- Add localStorage persistence for voice/model selections.
-- Add a header sync check for Sheets (log warning if column count mismatch).
-- Introduce a simple logger utility (session-tagged).
-- Update `PROGRESS.md` to reflect current completion; remove stale TODO markers.
-
-## Strategic Enhancements (Mid Term)
-
-- Expand tool schema to support granular item-level operations (add/update/confirm) if model struggles with single final JSON.
-- Implement server-side session watchdog (Cloud Function or backend) for authoritative timeout enforcement.
-- Add analytics hook (e.g., event bus) for tool calls, disconnect reasons, timer triggers.
-- Provide A/B variants of the structured prompt to measure collection completeness.
-- Begin test coverage for core utilities (schema validation, sanitize, timers logic via mocked clock).
-
-## Risks if Unaddressed
-
-- Data Loss: Single-shot tool call can miss partially gathered data on abrupt disconnect.
-- Prompt Entropy: Monolithic prompt harder to iterate safely—risk regressions.
-- Operational Cost: Lack of retention GC could inflate storage bills later.
-- UX Friction: Missing consent injection could block certain deployments.
-
-## Suggested Next Actions
-
-1. Implement structured prompt builder (function assembling ordered segments + persona overlay).
-2. Add ephemeral lead accumulator & autosave (optional local persistence) with recovery.
-3. Expand tool design (scaffold, behind feature flag) for item-level operations.
-4. Add consent runtime injection + test.
-5. Write minimal test suite for sanitize + timers.
-6. Add logger + correlation IDs.
-7. Update docs & progress.
+Core MVP is feature-complete for a stable demo. Next maturity step is resilience (partial lead safeguarding), compliance (consent runtime), and experimentation infrastructure (telemetry + prompt variants). Strategic decision required on whether to pivot to transcript post-processing; delaying that decision blocks optimizing current tool path.
 
 ---
-Generated automatically as part of the audit task.
+Status: Superseded draft; will be replaced once new docs suite lands.

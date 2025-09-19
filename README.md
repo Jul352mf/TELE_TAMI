@@ -5,67 +5,37 @@
 
 ## Overview
 
-TELE TAMI is an AI-powered voice agent built on Hume's Empathic Voice Interface (EVI) for capturing commodity trading leads. This MVP implementation allows users to interact with TAMI via voice to collect structured trading information.
+TELE TAMI is an AI-powered voice agent (Hume EVI) that captures structured commodity trading leads through natural conversation. It validates lead data, persists it (Firestore + Google Sheets), and dispatches notification emails. The system supports multi-persona styles, emerging multi-lead flows, and a roadmap for incremental tool capture or transcript post-processing.
 
-## Deviations
+Full documentation now lives under `docs/`:
+- Quick intro: `docs/overview.md`
+- System design: `docs/architecture.md`
+- Prompt & personas: `docs/prompting.md`
+- Dev workflow: `docs/development.md`
+- Deployment & ops: `docs/deployment.md`, `docs/operations.md`
+- Differences from template: `docs/template-diff.md` & `docs/template-overview.md`
+- Roadmap: `docs/roadmap.md`
 
-*None - following blueprint exactly*
+Outdated root guides have been archived to `docs/archive/`.
 
-## Quick Start
+## Quick Start (Condensed)
 
-1. **Environment Setup**
-   ```bash
-   cp .env.example .env.local
-   # Fill in your Hume API keys and other required environment variables
-   ```
+```bash
+cp .env.example .env.local   # add keys
+npm install
+npm run dev
+# open http://localhost:3000
+```
 
-2. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+For full setup (Firebase, Sheets, SendGrid) see `docs/deployment.md`.
 
-3. **Run Development Server**
-   ```bash
-   npm run dev
-   ```
+## Environment Variables (Summary)
+See `.env.example` and `docs/deployment.md` for full list.
 
-4. **Open Application**
-   Navigate to `http://localhost:3000`
+Core: `HUME_API_KEY`, `HUME_SECRET_KEY`, `NEXT_PUBLIC_HUME_API_KEY`, `LEADS_EMAIL`, `CONSENT_MODE`, `GOOGLE_SHEETS_ID`, `GOOGLE_SERVICE_ACCOUNT_JSON`.
+Flags: `NEXT_PUBLIC_INCREMENTAL_LEADS=1`, `RETENTION_DAYS`, `RETENTION_DRY_RUN`, `CONSENT_LINE`.
 
-## Environment Variables
-
-Required environment variables (see `.env.example`):
-
-- `HUME_API_KEY` - Your Hume API key
-- `HUME_SECRET_KEY` - Your Hume secret key
-- `NEXT_PUBLIC_HUME_API_KEY` - Public Hume API key for client
-- `LEADS_EMAIL` - Email address for lead notifications
-- `CONSENT_MODE` - Consent behavior (required|optional|off)
-- `GOOGLE_SHEETS_ID` - Google Sheets spreadsheet ID
-- `GOOGLE_SERVICE_ACCOUNT_JSON` - Service account credentials (JSON)
-
-### Feature Flags & Extended Environment Variables
-
-These flags control optional or experimental behavior. Unless noted as `public`, they are server-side only.
-
-| Variable | Scope | Values / Format | Default | Purpose |
-|----------|-------|-----------------|---------|---------|
-| `NEXT_PUBLIC_INCREMENTAL_LEADS` | public | `1` \| unset | unset (off) | Enables incremental lead tools (add/update single field, confirm, summarize, get missing fields) instead of single final `recordLead` call only. |
-| `CONSENT_MODE` | server | `required` \| `optional` \| `off` | `optional` | Governs if consent line is auto-spoken (`required`), only on user inquiry (`optional`), or entirely disabled (`off`). |
-| `CONSENT_LINE` | server | Free text string | Built-in default line | Override the spoken consent sentence when `CONSENT_MODE=required`. Ignored when `off`; not auto-injected when `optional`. |
-| `RETENTION_DAYS` | server | Integer (e.g. `30`, `7`, `-1`) | `-1` | Age threshold (in days) to purge media links (audio/transcripts). `-1` disables cleanup. |
-| `RETENTION_DRY_RUN` | server | `true` \| `false` | `false` | When `true`, retention sweep only logs what would be deleted/updated—no storage or Firestore mutations. Safe mode for validation. |
-| `HUME_MODEL` | public/server | Model identifier | Hume default | (If supported) select alternate EVI model variant. |
-| `NEXT_PUBLIC_DEFAULT_VOICE_ID` | public | Voice ID | internal default | Pre-select a specific voice in the UI. |
-| `LEADS_EMAIL` | server | Email address | none | Target for notification / extension triggers. |
-
-### Behavior Notes
-
-- Incremental mode (`NEXT_PUBLIC_INCREMENTAL_LEADS=1`) extends the tool list with per-field operations. In off mode only `recordLead` is advertised.
-- In `CONSENT_MODE=optional`, the system will not auto-inject the consent line; model should surface it only if user asks about recording/privacy.
-- Retention sweep executes daily at 02:00 UTC (see `functions/src/index.ts`). Use `RETENTION_DRY_RUN=true` first to verify logs before enabling destructive deletions.
-- Media cleanup removes `audioUrl` / `transcriptUrl` fields and underlying Cloud Storage objects once older than `RETENTION_DAYS`.
-- Setting `RETENTION_DAYS` to a small number (e.g. `1`) in combination with dry-run provides quick validation of logging output.
+Behavior notes & feature flags detailed in `docs/operations.md`.
 
 ### Example `.env.local` Snippet
 
@@ -82,63 +52,17 @@ GOOGLE_SHEETS_ID=...
 GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'
 ```
 
-### Deployment Tips
+Deployment specifics moved to `docs/deployment.md`.
 
-- For Firebase Functions secrets (`GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_SHEETS_ID`, etc.) use `firebase functions:secrets:set` rather than committing values.
-- Public (`NEXT_PUBLIC_`) variables must be present at Next.js build time to affect the client bundle.
-- After changing retention flags, redeploy functions to ensure environment refresh.
+## Firebase / Sheets / Email
 
-## Firebase Setup
+See `docs/deployment.md` for step-by-step cloud setup and `docs/operations.md` for retention & consent.
 
-1. **Create Firebase Project**
-   - Enable Firestore Database
-   - Enable Cloud Storage
-   - Enable Cloud Functions
+## Sheets Schema
+Column layout and append order documented in `docs/deployment.md`.
 
-2. **Install Trigger Email Extension**
-   ```bash
-   firebase ext:install firebase/firestore-send-email
-   ```
-   Configure with your SendGrid API key.
-
-3. **Deploy Functions**
-   ```bash
-   cd functions
-   npm install
-   cd ..
-   firebase deploy --only functions
-   ```
-
-4. **Deploy Security Rules**
-   ```bash
-   firebase deploy --only firestore:rules,storage
-   ```
-
-## Google Sheets Setup
-
-1. Create a new Google Sheets spreadsheet
-2. Create a "Leads" tab with headers in row 1:
-   - Timestamp, Side, Product, Price, Price Unit, Quantity, Payment Terms, Incoterm, Port, Packaging, Transport Mode, Price Validity, Availability Time, Availability Qty, Delivery Timeframe, Transcript URL, Audio URL, Notes
-3. Share the spreadsheet with your service account email
-4. Add the spreadsheet ID to your environment variables
-
-## Features
-
-### Personas
-- **Professional**: Business-like, focused on accuracy
-- **Seductive**: Warm, charming, but classy and business-focused  
-- **Unhinged**: Sharp-tongued with profanity escalation (Spicy Mode only)
-
-### Special Modes
-- **Ole Mode**: Automatically activates when "Ole" is detected in conversation, switches to interview/sales mode
-- **Spicy Mode**: Enables the "unhinged" persona with profanity escalation
-- **Consent Gating**: Configurable consent behavior based on environment settings
-
-### Data Collection
-TAMI collects structured trading leads with validation for:
-- Required fields: side, product, price (CHF), quantity, payment terms, Incoterm 2020, port
-- Optional fields: packaging, transport, validity, availability, delivery timeframe
-- Automatic email notification and Google Sheets logging
+## Features (Brief)
+Personas, Ole interview mode, incremental tooling (flagged), structured lead validation, Sheets + email pipeline. Full detail: `docs/prompting.md` & `docs/architecture.md`.
 
 ## Smoke Test
 
@@ -178,7 +102,7 @@ Complete end-to-end test:
    - [ ] Persona selection affects the recorded persona field
    - [ ] "Ole mode" detection ready (transcript monitoring)
 
-## Testing with Real Services
+## Production Enablement
 
 When you have Firebase and Hume credentials:
 
@@ -206,17 +130,7 @@ npm run build
 ```
 
 ## Architecture
-
-- **Frontend**: Next.js App Router with Hume EVI React SDK
-- **Backend**: Next.js API routes for lead processing
-- **Database**: Firebase Firestore with server-write-only security rules
-- **Storage**: Cloud Storage for audio/transcripts
-- **Email**: Firestore Trigger Email extension
-- **Sheets**: Google Sheets API via Cloud Functions
-- **Functions**: Firebase Cloud Functions for data processing
+See `docs/architecture.md`.
 
 ## Support
-
-For issues with this TELE TAMI implementation, please create an issue in the repository.
-
-For Hume EVI support, [reach out on Discord](https://link.hume.ai/discord).
+Open an issue in this repository. For Hume EVI SDK matters use the Hume Discord: https://link.hume.ai/discord

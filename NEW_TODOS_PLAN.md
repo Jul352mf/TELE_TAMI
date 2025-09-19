@@ -213,3 +213,65 @@ Derived from `New_TODOs.md` (latest) including: refined conversation flow, multi
 
 ---
 Generated plan; ready for refinement or approval.
+
+---
+## Integrated Second Wave / Later Backlog
+The following items from `New_TODOs.md` second wave are mapped into thematic tracks for prioritization after core resilience work.
+
+### Conversational UX Enhancements
+- Voice speed slider (pre-call & in-call) → Phase 3 candidate (after telemetry to measure impact).
+- Improved instruction & description blocks (onboarding text, inline info icons).
+- Timeout warning explicit UX (visual & verbal) → integrate with timers (Phase 2 add-on).
+- Mobile layout adjustment (call button bottom, settings above) for ergonomic access.
+- Higher contrast light mode adjustments (selection & hover states).
+- In-call notes field (user + tester) persisted; triggers email to product owner.
+
+### Prompt & Behavior Experiments
+- Example optimal chat transcript embedded as adaptive exemplar (anonymized) – gating on privacy review.
+- Reduced confirmation variant (experiment with lighter confirmation script) – AB test harness required.
+- Internal reasoning instruction (chain-of-thought internalization without leaking verbose lists) – careful safety review.
+- Witty impossibility callouts (e.g., impossible specs) – guardrail extension.
+- Trader-to-trader style emphasis (persona neutral tone) – integrate into tone layer.
+- Experiment with script fallback loop (single-item iterative capture) as last-resort reliability mode.
+
+### Tooling / Data Strategy Alternatives
+- Post-conversation transcript extraction pipeline (GPT-5 or later) as alternative to incremental tools – spin up experimental branch; requires transcript persistence.
+- Unfinished leads inclusion (partial persistence) – depends on draft autosave & fallback email.
+
+### Feature Extensions
+- Spec upload (file attachment) appended to email & stored (requires Storage rules update + email template variant).
+- Optional web search enrichment (low priority; potential distraction from focus on capture reliability).
+- Workspace switching CLI script (developer productivity tooling) – outside product path; put in `scripts/`.
+
+### Internationalization / Accessibility
+- Google translator plugin layout resilience; implement flexible containers & overflow protection.
+
+### Documentation & Experiment Tracking
+- Central prompt & config experimentation log (append-only) – create `docs/experiments.md`.
+- Structured capture of idea iterations with outcome metrics once telemetry live.
+
+### Compliance & Safety
+- Stronger profanity escalation policy for spicy/unhinged personas (currently relies on model self-moderation).
+
+### Backlog Items → Roadmap Mapping
+| Backlog Theme | Roadmap Phase (Tentative) | Notes |
+|---------------|---------------------------|-------|
+| Voice speed slider | Phase 3 | Needs SDK control validation |
+| Timeout warning UX | Phase 2 | Leverages existing timers |
+| Transcript post-processing | Parallel Track | Requires transcript storage design |
+| Spec upload | Phase 4 | After draft reliability proven |
+| Notes field + email | Phase 2 | Simple Firestore + mail doc |
+| Light mode contrast | Phase 2 | Pure CSS / theme tokens |
+| Mobile layout tweak | Phase 2 | Tailwind responsive adjustments |
+| Witty impossibility responses | Phase 3 | Prompt guardrail refinement |
+| Reduced confirmation variant | Phase 4 | Needs AB harness |
+| Internal reasoning instruction | Phase 5 | After reliability metrics baseline |
+| Google translate resilience | Phase 2 | CSS containment & width guards |
+| Experiment log doc | Phase 2 | Low effort, high clarity |
+
+### Deferrals / Watch List
+- Web search: revisit only if lead capture accuracy >95% and added value proven.
+- Additional currencies/units: await real trader demand.
+
+---
+End of integrated backlog section.

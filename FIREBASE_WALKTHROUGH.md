@@ -1,21 +1,23 @@
-# Firebase Walkthrough (PowerShell friendly)
+# Firebase Walkthrough (Archived)
+
+<!-- ARCHIVED: Use docs/deployment.md for current instructions. -->
 
 Follow these steps to stand up Firebase for TELE TAMI. All commands are ready for Windows PowerShell.
 
-## 0) Install & Login
+## 0) Install & Login (Historical)
 ```powershell
 npm i -g firebase-tools
 firebase login
 ```
 
-## 1) Select Project
+## 1) Select Project (Historical)
 Pick your target project ID once created in the Firebase console.
 ```powershell
 $PROJECT_ID = "your-project-id"
 firebase use $PROJECT_ID
 ```
 
-## 2) Deploy Security Rules & Indexes
+## 2) Deploy Security Rules & Indexes (Historical)
 This enforces server-only access for MVP.
 ```powershell
 cd C:\Dev\Projects\TELE_TAMI
@@ -23,7 +25,7 @@ firebase deploy --only firestore:rules,storage
 firebase deploy --only firestore:indexes
 ```
 
-## 3) Prepare Google Sheets Access (Service Account)
+## 3) Prepare Google Sheets Access (Service Account) (Historical)
 - In Google Cloud Console (same project), create a Service Account with role "Editor" (or scoped to Sheets usage).
 - Create a JSON key and download it as `service-account.json`.
 - Share your target Google Sheet with the service account email (it ends with `iam.gserviceaccount.com`).
@@ -45,14 +47,14 @@ firebase functions:secrets:set GOOGLE_SHEETS_ID
 
 Or keep `GOOGLE_SHEETS_ID` in `.env.local` for local reference and set it as a secret later.
 
-## 4) Configure Retention (Optional)
+## 4) Configure Retention (Optional) (Historical)
 Keep cleanup disabled until implemented:
 ```powershell
 firebase functions:secrets:set RETENTION_DAYS
 # Enter: -1
 ```
 
-## 5) Deploy Functions
+## 5) Deploy Functions (Historical)
 ```powershell
 cd functions
 npm install
@@ -65,7 +67,7 @@ Check logs:
 firebase functions:log
 ```
 
-## 6) Install Trigger Email (SendGrid)
+## 6) Install Trigger Email (SendGrid) (Historical)
 Installs the official extension that watches the `mail/` collection.
 ```powershell
 firebase ext:install firebase/firestore-send-email
@@ -76,7 +78,7 @@ During setup set:
 - API Key: your SendGrid API key
 - From / Reply-To: choose appropriate addresses
 
-## 7) Enable API Persistence
+## 7) Enable API Persistence (Historical)
 By default, the API only validates and logs. Once you’re ready to persist:
 - Ensure the server has these envs:
   - `FIREBASE_PROJECT_ID=$PROJECT_ID`
@@ -84,7 +86,7 @@ By default, the API only validates and logs. Once you’re ready to persist:
 - Uncomment the Firestore write and `mail` creation in `app/api/lead/route.ts`.
 - Redeploy rules/functions if needed.
 
-## 8) End-to-End Smoke
+## 8) End-to-End Smoke (Historical)
 - Start the app:
 ```powershell
 npm run dev
@@ -105,7 +107,7 @@ curl -X POST http://localhost:3000/api/lead `
 ```
 - With persistence enabled, a `leads/` doc will write, the Function will append to your `Leads` sheet, and a `mail/` doc will trigger an email.
 
-## 9) Troubleshooting
+## 9) Troubleshooting (Historical)
 - Missing Sheets envs in Functions: `onLeadCreate` logs warnings and no-ops.
 - Extension not sending email: verify SendGrid key and `mail` docs exist.
 - Rules blocking access: By design, client cannot read/write `leads/`, `calls/`, `mail/`.

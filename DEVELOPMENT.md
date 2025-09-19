@@ -1,11 +1,10 @@
-# TELE TAMI – Development Notes
+<!-- ARCHIVED: Content superseded by docs/development.md -->
+# TELE TAMI – Development Notes (Archived)
 
-This document complements the README and SETUP_GUIDE with implementation-specific notes relevant for contributors.
+This file is retained for historical context. See `docs/development.md` for current guidance.
 
-## Repos / Branching
-- Default branch: `main`
-- Active PR under review: `pr-1` (fetched from GitHub PR #1)
-- Use feature branches for changes; keep diffs tight and focused
+## Repos / Branching (Historical)
+*Content may be stale.*
 
 ## Tech Stack
 - Next.js 14 App Router
@@ -34,26 +33,26 @@ npm test
 - Ole Mode: auto-detected when the transcript matches `/\bole\b/i`; augments system prompt and payload
 - The SDK `onToolCall` is stubbed in `TeleTami.tsx`; the actual interception is handled within `CallButton` until SDK handlers are available
 
-## Known Stubs / TODOs
+## Known Stubs / TODOs (Historical)
 - API `app/api/lead/route.ts` has Firestore writes and `mail/` creation commented out; enable when credentials are configured
 - `functions/src/index.ts` retentionSweep is a stub; implement GC of audio/transcripts and doc updates
 - `CallButton.tsx` connects without passing tools/system prompt (awaiting SDK support and config); prompts are logged for now
 - `NEXT_PUBLIC_*` Hume config is optional; only required when you manage configs on Hume Dashboard
 
-## Env Handling
+## Env Handling (Historical)
 - Next.js server reads `HUME_API_KEY`/`HUME_SECRET_KEY` to mint an access token. If values contain `demo`, a demo token is returned and voice features won’t fully work.
 - Functions read secrets from `process.env`; prefer `firebase functions:secrets:set` over bundling JSON into code.
 
-## Testing Strategy
+## Testing Strategy (Historical)
 - Unit tests focus on schema validation in `lib/schema.ts`
 - Consider adding API route tests with supertest in a future iteration
 - GitHub Actions CI runs lint, typecheck, and tests on pushes/PRs to `main`
 
-## Release/Deploy
+## Release/Deploy (Historical)
 - Deploy rules first, then Functions
 - When persisting leads, uncomment Firestore writes in API route and verify that Trigger Email extension is installed
 
-## Code Style
+## Code Style (Historical)
 - Keep edits minimal and focused
 - Favor server-only access for secrets; never expose admin credentials to the client
 - Avoid inline comments in code unless they convey non-obvious constraints
