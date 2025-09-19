@@ -275,3 +275,70 @@ The following items from `New_TODOs.md` second wave are mapped into thematic tra
 
 ---
 End of integrated backlog section.
+
+---
+## Integrated Third Wave / New Ideas
+
+The following emergent concepts expand or offer architectural alternatives to items already in earlier phases. Incorporated here for visibility and scoping.
+
+### 1. Alternative Incremental JSON Export Flow
+
+Original Idea: Allow the model to emit ad‑hoc JSON snippets (one or many fields) inline during conversation; backend aggregates heterogeneous fragments and final email / sheet contains union of all keys (including novel ones).
+
+Comparison vs Current Planned Incremental Tools (Stages B–D):
+
+- Current Path: Explicit structured tool surface per field operation (predictable schema, strong validation, tighter guardrails).
+- Third Wave Idea: Free‑form opportunistic capture (higher flexibility, lower ceremony, tolerates novel attributes, but higher normalization cost & risk of noisy / inconsistent keys).
+
+Proposed Evaluation Track (Parallel after Phase 2):
+
+1. Draft design doc: ingestion pipeline, normalization rules (key canonicalization, allowed chars, length caps), conflict resolution (last write wins vs first lock), provenance tagging.
+2. Prototype lightweight collector endpoint (accepts `{ sessionId, fragment: { ... } }`).
+3. Instrument metrics: unique key count per session, duplication rate, % fragments parsable, sheet column growth rate.
+4. Success Criteria Gate: <5% unparsable fragments, <15% duplicate semantic keys after canonicalization, observed reduction in missed fields vs baseline.
+5. Decision: Adopt as augmentation (hybrid) or replace fine‑grained tools.
+
+Risk / Mitigation:
+
+- Key Explosion → Canonicalization map + periodic pruning script.
+- Junk / hallucinated fields → Minimum occurrence threshold before surfacing in sheet (e.g., require 2+ distinct sessions) or quarantine to a side sheet.
+- Data Quality Reconciliation → Offline consolidation job to suggest merges (manual review early stage).
+
+### 2. Prompt Management System (File-Based Assembly)
+
+Current Plan already introduces a modular builder inside `lib/hume.ts`. Third Wave enhancement proposes externalizing prompt parts into a directory for easier diffs, versioning, and experimentation.
+
+Incremental Implementation Path:
+
+1. Create `prompt_parts/` directory: numbered or prefixed segments (`00_role.md`, `10_flow.md`, etc.).
+2. Assembly script (`scripts/buildPrompt.ts`) reading ordered metadata (JSON manifest) producing a compiled prompt artifact (checked in for reproducibility).
+3. Hash & Version Tag: embed short git hash + manifest version inside prompt header for telemetry correlation.
+4. Experiment Manifest: allow toggling inclusion / variant selection (e.g., `flow.variant = concise|rich`).
+5. Telemetry Linking: record `promptVersionId` with each session for AB analysis.
+
+Complexity: Medium (coordination + tooling). Schedule: Start in Phase 1 tail / early Phase 2 once baseline builder stable.
+
+### 3. Required Planning vs Ad‑Hoc Execution
+
+| Idea | Complexity | Requires Dedicated Plan? | Rationale |
+|------|------------|--------------------------|-----------|
+| Alternative JSON fragment export | High | Yes (design doc + prototype gate) | Architectural divergence & data model impact |
+| File-based prompt management system | Medium | Yes (lightweight implementation spec) | Affects dev workflow & experiment tracking |
+| (Previously added) Example transcript exemplar | Low | No | Simple content insertion once privacy cleared |
+| Key canonicalization & pruning (if JSON fragments adopted) | Medium | Bundled with JSON fragment plan | Derivative of architectural choice |
+| Telemetry promptVersion linkage | Low | No | Straightforward field inclusion |
+
+### 4. Recommended Next Steps for Third Wave Items
+
+- Defer JSON fragment export until after Phase 2 resilience metrics collected (need baseline abandonment & missing field rates first).
+- Begin prompt file externalization spike behind a feature flag; keep in-repo builder as fallback.
+- Add `promptVersionId` field emission early (low effort, unlocks analytics).
+
+### 5. Open Questions (To Clarify Before Advancing)
+
+1. Acceptable upper bound on dynamic sheet column growth per week?
+2. Governance for retiring low-use emergent fields—manual or automated threshold?
+3. Need for compliance review of storing potentially PII-rich arbitrary keys?
+
+---
+End of integrated third wave section.
