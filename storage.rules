@@ -1,0 +1,19 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Audio and transcript files - server managed only for MVP
+    match /audio/{allPaths=**} {
+      allow read, write: if false; // Server-only access
+    }
+    
+    match /transcripts/{allPaths=**} {
+      allow read, write: if false; // Server-only access
+    }
+    
+    // TODO: Future authenticated access for admin console
+    // match /audio/{allPaths=**} {
+    //   allow read: if request.auth != null && 
+    //     request.auth.token.admin == true;
+    // }
+  }
+}
