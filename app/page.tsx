@@ -1,9 +1,5 @@
 import { getHumeAccessToken } from "@/utils/getHumeAccessToken";
-import dynamic from "next/dynamic";
-
-const TeleTami = dynamic(() => import("@/components/TeleTami"), {
-  ssr: false,
-});
+import TeleTami from "@/components/TeleTami";
 
 export default async function Page() {
   const accessToken = await getHumeAccessToken();

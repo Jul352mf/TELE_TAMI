@@ -5,7 +5,7 @@ interface ModelSelectProps { value: string; onChange: (v: string) => void }
 
 export default function ModelSelect({ value, onChange }: ModelSelectProps) {
   return (
-    <Select label="Model" value={value} onValueChange={(v) => onChange(v)}>
+    <Select value={value} onValueChange={(v) => onChange(v)}>
       <SelectItem value="hume-evi-3">hume-evi-3</SelectItem>
       <SelectItem value="gpt-4o">gpt-4o</SelectItem>
   <SelectItem value="gpt-5">gpt-5</SelectItem>

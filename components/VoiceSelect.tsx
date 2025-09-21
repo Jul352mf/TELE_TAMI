@@ -20,7 +20,7 @@ export default function VoiceSelect({
   ];
 
   return (
-    <Select label="Voice" value={value} onValueChange={(v) => onChange(v)}>
+    <Select value={value} onValueChange={(v) => onChange(v)}>
       {voices.map(v => (
         <SelectItem key={v.id} value={v.id}>{v.label}</SelectItem>
       ))}

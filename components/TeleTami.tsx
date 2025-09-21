@@ -22,27 +22,111 @@ import ModelSelect from "./ModelSelect";
 import { SettingsProvider, useSettings } from './SettingsContext';
 import ConfigSelector from './ConfigSelector';
 import { useConversationState } from '@/hooks/useConversationState';
-import VoiceSpeedSlider from './VoiceSpeedSlider';
+// Legacy slider kept for potential reuse; not used in new dropdown UX
+// import VoiceSpeedSlider from './VoiceSpeedSlider';
 import NotesComponent from './NotesComponent';
 import SpecFileUpload from './SpecFileUpload';
 import InfoTooltip from './InfoTooltip';
+import { Slider } from './ui/slider';
 
 function TeleTamiInner({ accessToken }: { accessToken: string }) {
   const [persona, setPersona] = useState<"professional" | "seductive" | "unhinged" | "cynical">("professional");
-  const [spicyMode, setSpicyMode] = useState(false);
   const [voiceId, setVoiceId] = useState<string>("default");
   const [modelId, setModelId] = useState<string>("hume-evi-3");
   const [recipientEmail, setRecipientEmail] = useState<string>("");
-  const [voiceSpeed, setVoiceSpeed] = useState<number | undefined>(undefined);
+  const [voiceSpeed, setVoiceSpeed] = useState<number>(1.0);
 
-  // Restore persisted settings
+  // Voice speed dropdown expanding slider
+  const VoiceSpeedDropdown: React.FC<{ current: number; onChange: (v: number) => void }> = ({ current, onChange }) => {
+    const [open, setOpen] = useState(false);
+    const panelId = 'voice-speed-panel';
+    const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+      if (!open) return;
+      const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+      const onClick = (e: MouseEvent) => {
+        if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
+      };
+      window.addEventListener('keydown', onKey);
+      window.addEventListener('mousedown', onClick);
+      return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('mousedown', onClick); };
+    }, [open]);
+
+    return (
+  <div className="flex flex-col gap-1" ref={wrapperRef}>
+        <button
+          type="button"
+          aria-haspopup="true"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen(o => !o)}
+          className="h-10 w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 text-sm text-neutral-200 flex items-center justify-between hover:border-neutral-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+        >
+            <span className="sr-only">Voice Speed</span>
+          <span className="flex items-center gap-2 text-xs text-neutral-300">
+            {current.toFixed(1)}x
+            <svg aria-hidden="true" className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </span>
+        </button>
+        {open && (
+          <div
+            id={panelId}
+            className="rounded-md border border-neutral-700 bg-neutral-900 p-4 flex flex-col gap-4 shadow-lg animate-in fade-in"
+          >
+            {/* Radix slider alternative: simple custom track for now replaced soon */}
+            <div className="flex items-center gap-3 select-none">
+              <Slider
+                min={0.5}
+                max={2.0}
+                step={0.1}
+                value={[current]}
+                onValueChange={(v) => onChange(v[0])}
+                aria-label="Voice speed"
+                className="w-full"
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-neutral-400 font-mono">
+              <span>0.5x</span>
+              <span>{current.toFixed(1)}x</span>
+              <span>2.0x</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const AdvancedSessionConfig: React.FC<{ label: string }> = ({ label }) => {
+    const [open, setOpen] = useState(false);
+    return (
+      <div className="border border-neutral-700 rounded-md bg-neutral-900">
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          aria-expanded={open}
+          className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-neutral-300 bg-neutral-900 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-md transition-colors"
+        >
+          <span>{label}</span>
+          <span className="text-xs text-neutral-500">{open ? 'Hide' : 'Show'}</span>
+        </button>
+        {open && (
+          <div className="px-4 pb-4 pt-2 flex flex-col gap-3 text-sm">
+            <ConfigSelector />
+            <p className="text-[11px] text-neutral-500 leading-relaxed">Select or layer configuration options. More tuning controls (sampling, prompt variants) will appear here later.</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Restore persisted settings (legacy spicyMode ignored)
   useEffect(() => {
     try {
       const stored = localStorage.getItem('tami:settings:v1');
       if (stored) {
-        const { persona, spicyMode, voiceId, modelId } = JSON.parse(stored);
+  const { persona, voiceId, modelId } = JSON.parse(stored);
         if (persona) setPersona(persona);
-        if (typeof spicyMode === 'boolean') setSpicyMode(spicyMode);
         if (voiceId) setVoiceId(voiceId);
         if (modelId) setModelId(modelId);
       }
@@ -52,10 +136,10 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
   // Persist settings debounced
   useEffect(() => {
     const t = window.setTimeout(() => {
-      try { localStorage.setItem('tami:settings:v1', JSON.stringify({ persona, spicyMode, voiceId, modelId })); } catch { /* ignore */ }
+  try { localStorage.setItem('tami:settings:v1', JSON.stringify({ persona, voiceId, modelId })); } catch { /* ignore */ }
     }, 250);
     return () => window.clearTimeout(t);
-  }, [persona, spicyMode, voiceId, modelId]);
+  }, [persona, voiceId, modelId]);
   const timeout = useRef<number | null>(null);
   const ref = useRef<ComponentRef<typeof Messages> | null>(null);
 
@@ -200,65 +284,56 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
           console.warn('Failed to apply live voice speed', e);
         }
       }
-    }, [connected, voiceSpeed, sendSessionSettings]);
+  }, [connected, sendSessionSettings]);
 
     if (!connected) {
-      // Pre-call minimal centered layout: two vertical sections
       return (
-        <div className="min-h-screen w-full flex items-center justify-center px-4">
-          <div className="w-full max-w-3xl flex flex-col items-center gap-10">
-            {/* Top section: Call button */}
-            <div className="w-full flex justify-center">
-              <div className="flex flex-col items-center gap-3 w-full">
-                <CallButton
-                  accessToken={accessToken}
-                  persona={persona}
-                  spicyMode={spicyMode}
-                  voiceId={voiceId}
-                  voiceSpeed={voiceSpeed}
-                  modelId={modelId}
-                  onToolCall={handleToolCall}
-                  configIdOption={settings.configId}
-                  includeCodeSystemPrompt={settings.codeSystemPrompt.mode !== 'NONE'}
-                />
-                <input
-                  type="email"
-                  placeholder="Email to receive lead (optional)"
-                  value={recipientEmail}
-                  onChange={(e) => setRecipientEmail(e.target.value)}
-                  className="w-full max-w-sm rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
+        <div className="min-h-screen w-full flex items-center justify-center bg-black px-6">
+          <div className="w-full max-w-lg mx-auto flex flex-col items-center gap-8">
+            {/* Call Button */}
+            <CallButton
+              accessToken={accessToken}
+              persona={persona}
+              voiceId={voiceId}
+              voiceSpeed={voiceSpeed}
+              modelId={modelId}
+              onToolCall={handleToolCall}
+              configIdOption={settings.configId}
+              includeCodeSystemPrompt={settings.codeSystemPrompt.mode !== 'NONE'}
+            />
+            {/* Settings Grid (match reference: grid sm:2 cols) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
+              <div className="flex flex-col gap-0">
+                <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Persona<InfoTooltip content="Tone & negotiation style." side="top" /></label>
+                <div className="w-full"><PersonaToggle value={persona} onChange={setPersona} /></div>
+              </div>
+              <div className="flex flex-col gap-0">
+                <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Model<InfoTooltip content="Reasoning model." side="top" /></label>
+                <div className="w-full"><ModelSelect value={modelId} onChange={setModelId} /></div>
+              </div>
+              <div className="flex flex-col gap-0">
+                <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Voice<InfoTooltip content="Synthesis voice." side="top" /></label>
+                <div className="w-full"><VoiceSelect value={voiceId} onChange={setVoiceId} /></div>
+              </div>
+              <div className="flex flex-col gap-0">
+                <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Voice Speed<InfoTooltip content="Adjust spoken rate" side="top" /></label>
+                <VoiceSpeedDropdown current={voiceSpeed} onChange={setVoiceSpeed} />
               </div>
             </div>
-            {/* Bottom section: horizontal settings row */}
-            <div className="w-full flex flex-col gap-6">
-              <div className="flex items-center gap-2">
-                <ConfigSelector />
-                <InfoTooltip content="Select which backend configuration / prompt variant to use for this session." side="right" />
-              </div>
-              <div className="w-full flex flex-wrap justify-center gap-6">
-                <div className="flex items-center gap-2">
-                  <PersonaToggle
-                    value={persona}
-                    onChange={setPersona}
-                    spicyMode={spicyMode}
-                    onSpicyModeChange={setSpicyMode}
-                  />
-                  <InfoTooltip content="Change the persona tone. This affects wording and negotiation style." side="top" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <VoiceSelect value={voiceId} onChange={setVoiceId} />
-                  <InfoTooltip content="Choose the synthesis voice used for responses." side="top" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <ModelSelect value={modelId} onChange={setModelId} />
-                  <InfoTooltip content="Select the reasoning model powering the assistant." side="top" />
-                </div>
-                <div className="min-w-[260px] max-w-sm flex items-center gap-2">
-                  <VoiceSpeedSlider onSpeedChange={setVoiceSpeed} />
-                  <InfoTooltip content="Adjust real-time speech rate. Will apply on next utterance." side="top" />
-                </div>
-              </div>
+            {/* Session Configuration */}
+            <div className="w-full mt-2">
+              <AdvancedSessionConfig label="Session Configuration" />
+            </div>
+            {/* Email Field (moved below session config) */}
+            <div className="w-full flex flex-col items-center gap-2">
+              <input
+                type="email"
+                placeholder="Email to receive lead (optional)"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <p className="text-[11px] text-neutral-500 leading-tight">We’ll send captured lead details to this address (optional).</p>
             </div>
           </div>
         </div>

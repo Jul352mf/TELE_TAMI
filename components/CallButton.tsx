@@ -18,7 +18,7 @@ import { useState, useEffect } from "react";
 interface CallButtonProps {
   accessToken: string;
   persona: "professional" | "seductive" | "unhinged" | "cynical";
-  spicyMode: boolean;
+  spicyMode?: boolean; // deprecated, retained optional for backward compatibility
   voiceId?: string;
   voiceSpeed?: number; // multiplier e.g. 0.5 - 2.0
   modelId?: string;
@@ -53,7 +53,7 @@ export default function CallButton({
     }
   }, [messages, isOleMode]);
 
-  const effectivePersona = spicyMode && persona === 'unhinged' ? 'unhinged' : persona;
+  const effectivePersona = persona; // spicy mode removed; direct persona
   const chosenStrategy = resolveStrategy();
   const basePrompt = includeCodeSystemPrompt ? buildSystemPrompt(effectivePersona, isOleMode) : undefined;
   const strategyMods = chosenStrategy ? getStrategyPromptModifications(chosenStrategy) : [];
