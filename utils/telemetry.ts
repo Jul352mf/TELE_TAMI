@@ -1,5 +1,5 @@
 export type TelemetryEvent =
-  | { type: 'session_connected'; model: string; voice: string }
+  | { type: 'session_connected'; model: string; voice: string; persona: string; voiceSpeed?: number; promptChars: number }
   | { type: 'inactivity_warning' }
   | { type: 'inactivity_disconnected' }
   | { type: 'duration_warning' }

@@ -12,14 +12,15 @@ export interface SelectRootProps {
   children: React.ReactNode;
   className?: string;
   containerClassName?: string;
+  disabled?: boolean;
 }
 
-export function Select({ label, helper, value, onValueChange, children, className, containerClassName }: SelectRootProps) {
+export function Select({ label, helper, value, onValueChange, children, className, containerClassName, disabled }: SelectRootProps) {
   return (
     <div className={cn("flex flex-col gap-1", containerClassName ? containerClassName : "min-w-[180px]")}> 
       {label && <label className="text-xs font-medium text-muted-foreground tracking-wide">{label}</label>}
-      <RadixSelect.Root value={value} onValueChange={onValueChange}>
-        <RadixSelect.Trigger className={cn(
+      <RadixSelect.Root value={value} onValueChange={onValueChange} disabled={disabled}>
+        <RadixSelect.Trigger disabled={disabled} className={cn(
           "inline-flex w-full items-center justify-between gap-2 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 h-10 text-sm shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 disabled:pointer-events-none transition-colors data-[placeholder]:text-neutral-500",
           className
         )}>

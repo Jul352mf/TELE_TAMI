@@ -7,9 +7,11 @@ type VoiceOption = { id: string; label: string };
 export default function VoiceSelect({
   value,
   onChange,
+  disabled = false,
 }: {
   value: string;
   onChange: (voiceId: string) => void;
+  disabled?: boolean;
 }) {
   const voices: VoiceOption[] = [
     { id: "default", label: "Current Default" },
@@ -20,7 +22,7 @@ export default function VoiceSelect({
   ];
 
   return (
-    <Select value={value} onValueChange={(v) => onChange(v)}>
+    <Select disabled={disabled} value={value} onValueChange={(v) => onChange(v)}>
       {voices.map(v => (
         <SelectItem key={v.id} value={v.id}>{v.label}</SelectItem>
       ))}

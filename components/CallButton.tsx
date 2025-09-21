@@ -68,14 +68,17 @@ export default function CallButton({
     const { id: resolvedModel, changed } = normalizeModelId(modelId);
     const { id: finalModel, forced } = !configId ? ensureToolCapable(resolvedModel) : { id: resolvedModel, forced: false };
 
+    const effectiveSpeed = typeof voiceSpeed === 'number' && voiceSpeed > 0 ? voiceSpeed : 1.0;
+    const voiceConfig = (voiceId && voiceId !== 'default') || effectiveSpeed !== 1.0 ? {
+      ...(voiceId && voiceId !== 'default' ? { id: voiceId } : {}),
+      speed: effectiveSpeed,
+    } : undefined;
+
     const sessionSettings = {
       type: 'session_settings' as const,
       systemPrompt: systemPrompt,
       tools,
-      voice: (voiceId && voiceId !== 'default') || voiceSpeed ? {
-        ...(voiceId && voiceId !== 'default' ? { id: voiceId } : {}),
-        ...(voiceSpeed ? { speed: voiceSpeed } : {}),
-      } : undefined,
+      voice: voiceConfig,
       model: finalModel !== 'hume-evi-3' ? { id: finalModel } : undefined,
     };
 
@@ -90,14 +93,18 @@ export default function CallButton({
         console.log('Requested Model:', resolvedModel);
         console.log('Final Model Used:', finalModel, forced ? '(forced tool-capable fallback)' : '');
         console.log('System prompt length:', systemPrompt ? systemPrompt.length : 0);
-        const pvid = getPromptVersionId();
-        if (pvid) emit({ type: 'prompt_version', id: pvid });
-  emit({ type: 'session_connected', model: finalModel, voice: voiceId || 'default' });
+    const pvid = getPromptVersionId();
+    if (pvid) emit({ type: 'prompt_version', id: pvid });
+    emit({ type: 'session_connected', model: finalModel, voice: voiceId || 'default', persona: effectivePersona, voiceSpeed: voiceConfig?.speed, promptChars: systemPrompt ? systemPrompt.length : 0 });
         if (changed) {
-          console.warn(`Unsupported model '${modelId}' selected; fell back to 'hume-evi-3'`);
+          const msg = `Unsupported model '${modelId}' – fell back to 'hume-evi-3'`;
+          console.warn(msg);
+          toast.message(msg);
         }
         if (forced) {
-          console.warn('Forced tool-capable model because no configId was supplied.');
+          const msg = 'Forced tool-capable model because no configId was supplied (using hume-evi-3).';
+          console.warn(msg);
+          toast.message(msg);
         }
         if (systemPrompt && systemPrompt.includes('CONSENT LINE:')) emit({ type: 'consent_injected' });
         // Ensure settings apply early

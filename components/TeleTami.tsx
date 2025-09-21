@@ -274,17 +274,7 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
       }
     }, [pendingPushBack, consumePushBack]);
 
-    // Live apply voice speed when connected and slider changes
-    useEffect(() => {
-      if (connected && voiceSpeed && typeof voiceSpeed === 'number') {
-        try {
-          // Library typing may not expose partial voice updates; cast to any
-          sendSessionSettings({ voice: { speed: voiceSpeed } } as any);
-        } catch (e) {
-          console.warn('Failed to apply live voice speed', e);
-        }
-      }
-  }, [connected, sendSessionSettings]);
+    // Connect-time lock: no dynamic reapplication of persona/model/voice/voiceSpeed post-connect
 
     if (!connected) {
       return (
@@ -305,19 +295,27 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
               <div className="flex flex-col gap-0">
                 <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Persona<InfoTooltip content="Tone & negotiation style." side="top" /></label>
-                <div className="w-full"><PersonaToggle value={persona} onChange={setPersona} /></div>
+                <div className="w-full opacity-100">
+                  <PersonaToggle value={persona} onChange={setPersona} disabled={status.value === 'connecting' || status.value === 'connected'} />
+                </div>
               </div>
               <div className="flex flex-col gap-0">
                 <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Model<InfoTooltip content="Reasoning model." side="top" /></label>
-                <div className="w-full"><ModelSelect value={modelId} onChange={setModelId} /></div>
+                <div className="w-full">
+                  <ModelSelect value={modelId} onChange={setModelId} disabled={status.value === 'connecting' || status.value === 'connected'} />
+                </div>
               </div>
               <div className="flex flex-col gap-0">
                 <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Voice<InfoTooltip content="Synthesis voice." side="top" /></label>
-                <div className="w-full"><VoiceSelect value={voiceId} onChange={setVoiceId} /></div>
+                <div className="w-full">
+                  <VoiceSelect value={voiceId} onChange={setVoiceId} disabled={status.value === 'connecting' || status.value === 'connected'} />
+                </div>
               </div>
               <div className="flex flex-col gap-0">
                 <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Voice Speed<InfoTooltip content="Adjust spoken rate" side="top" /></label>
-                <VoiceSpeedDropdown current={voiceSpeed} onChange={setVoiceSpeed} />
+                <div className={status.value === 'connected' ? 'opacity-60 pointer-events-none' : ''}>
+                  <VoiceSpeedDropdown current={voiceSpeed} onChange={setVoiceSpeed} />
+                </div>
               </div>
             </div>
             {/* Session Configuration */}
