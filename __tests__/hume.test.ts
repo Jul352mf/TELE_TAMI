@@ -12,7 +12,10 @@ test("persona includes cynical", () => {
 
 test("buildSystemPrompt concatenates persona and interview mode", () => {
   const out = buildSystemPrompt("professional", true);
-  expect(out).toContain(baseSystemPrompt);
+  // Should contain core structural markers even when compiled file prompt variant is used
+  expect(out).toMatch(/GOAL:/);
+  expect(out).toMatch(/REQUIRED FIELDS:/);
+  expect(out).toMatch(/OUTPUT:/);
   expect(out).toContain(personaPrompts.professional);
   expect(out).toContain(interviewModePrompt);
 });

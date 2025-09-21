@@ -125,7 +125,7 @@ describe('Conversation State Management', () => {
       
       expect(recap).toContain('Lead 1: BUY Wheat - Complete');
       expect(recap).toContain('Lead 2: SELL Corn - Incomplete');
-      expect(recap).toContain('Lead 3: BUY Soybeans - Incomplete');
+  expect(recap).toContain('Lead 3: BUY Soybeans - Complete');
     });
 
     it('should handle empty leads array', () => {

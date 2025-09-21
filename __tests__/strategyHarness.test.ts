@@ -104,17 +104,17 @@ describe('Strategy Harness', () => {
 
     it('should return confirmation style for strategy B', () => {
       const modifications = getStrategyPromptModifications('B');
-      expect(modifications).toContain(expect.stringContaining('CONFIRMATION_STYLE'));
+      expect(modifications.some(m => m.includes('CONFIRMATION_STYLE'))).toBe(true);
     });
 
     it('should return incremental mode for strategy C', () => {
       const modifications = getStrategyPromptModifications('C');
-      expect(modifications).toContain(expect.stringContaining('INCREMENTAL_MODE'));
+      expect(modifications.some(m => m.includes('INCREMENTAL_MODE'))).toBe(true);
     });
 
     it('should return experimental mode for strategy E', () => {
       const modifications = getStrategyPromptModifications('E');
-      expect(modifications).toContain(expect.stringContaining('EXPERIMENTAL_MODE'));
+      expect(modifications.some(m => m.includes('EXPERIMENTAL_MODE'))).toBe(true);
     });
   });
 

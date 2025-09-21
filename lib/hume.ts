@@ -3,7 +3,7 @@ import { leadJsonSchema } from "./schema";
 // Hume tool parameters accept a restricted JSON Schema subset.
 // Keep only: type, enum, properties, required, items (object/string), $ref, description.
 // Remove unsupported keys like title, minLength, etc.
-function sanitizeForHume(schema: any): any {
+export function sanitizeForHume(schema: any): any {
   if (schema == null || typeof schema !== "object") return schema;
 
   // Handle objects with properties
@@ -117,7 +117,10 @@ export const confirmFieldValueTool = {
 // Prompt segments (structured)
 const PROMPT_ROLE = `You are TAMI, an elite AI voice assistant in the commodity trading sector. You connect people across continents and reliably collect high-quality trading leads.`;
 
-const PROMPT_GOAL = `GOAL: Extract and confirm a complete trading lead with all REQUIRED fields. When all required fields are captured ask if the trader wants to "lock in the lead now" or "add more details". If they choose more details, continue until fields are exhausted, clearly unavailable, they ask you to stop, or the conversation ends naturally. When confirmed, call the tool recordLead with a single JSON object (no commentary).`;
+const PROMPT_GOAL = `GOAL: Extract and confirm a complete trading lead with all REQUIRED fields.
+When all required fields are captured ask if the trader wants to "lock in the lead now" or "add more details".
+If they choose more details, continue until fields are exhausted, clearly unavailable, they ask you to stop, or the conversation ends naturally.
+When confirmed, call the tool recordLead with a single JSON object (no commentary).`;
 
 const PROMPT_REQUIRED = `REQUIRED FIELDS:\n- side (BUY|SELL)\n- product\n- price (amount + currency + per unit mt|kg)\n- quantity (amount + unit mt|kg)\n- paymentTerms\n- incoterm (EXW|FCA|CPT|CIP|DAP|DPU|DDP|FAS|FOB|CFR|CIF)\n- at least one of loadingLocation or deliveryLocation`;
 

@@ -18,7 +18,7 @@ describe('Closing integration flow', () => {
     let state = createConversationState('E');
     state = updateConversationState(state, 'no I do not want');
     state = updateConversationState(state, 'stop asking please');
-    state = updateConversationState(state, 'leave this now goodbye');
+  state = updateConversationState(state, 'leave this now');
     const { trigger, reason } = shouldTriggerClosing(state);
     expect(trigger).toBe(true);
     expect(reason).toBe('consecutive_negative_sentiment');

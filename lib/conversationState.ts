@@ -35,8 +35,8 @@ const CLOSING_WINDOW_SIZE = 3; // messages to analyze for closing triggers
  */
 function detectNegativeSentiment(message: string): boolean {
   const negativePatterns = [
-    /\b(no|nah|nope|not interested|done|enough|stop|quit|end|finish)\b/i,
-    /\b(frustrated|annoyed|tired|bored|over it)\b/i,
+    /\b(no|nah|nope|not interested|done|enough|stop|quit|end|finish|leave)\b/i,
+  /\b(frustrated|annoyed|annoying|tired|bored|over it)\b/i,
     /\b(can't|won't|don't want|not going to)\b/i,
     /\b(whatever|fine|forget it|skip it)\b/i
   ];
@@ -64,7 +64,7 @@ export function shouldTriggerClosing(state: ConversationState): { trigger: boole
 
   // Check for explicit completion signals
   const latestMessage = state.recentMessages[state.recentMessages.length - 1] || '';
-  if (/\b(done|finished|complete|that's all|goodbye|bye|see you)\b/i.test(latestMessage)) {
+  if (!/[?]\s*$/.test(latestMessage) && /\b(done|finished|complete|that's all|goodbye|bye|see you)\b/i.test(latestMessage)) {
     return { trigger: true, reason: 'user_completion_signal' };
   }
 
@@ -120,13 +120,18 @@ export function updateConversationState(
   newState.currentTurn += 1;
 
   // Check for closing trigger
-  const { trigger, reason } = shouldTriggerClosing(newState);
-  if (trigger && reason) {
-    newState.closingTriggered = true;
-    emit({ type: 'closing_triggered', reason });
-  }
+  // Closing detection now handled externally to keep this function pure for testability
 
   return newState;
+}
+
+/**
+ * Apply (commit) a detected closing trigger to state and emit telemetry.
+ */
+export function applyClosingTrigger(state: ConversationState, reason: string): ConversationState {
+  if (state.closingTriggered) return state; // idempotent
+  emit({ type: 'closing_triggered', reason });
+  return { ...state, closingTriggered: true };
 }
 
 /**

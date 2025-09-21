@@ -15,7 +15,8 @@ describe('Lead Schema Validation', () => {
     },
     paymentTerms: 'LC at sight',
     incoterm: 'FOB',
-    port: 'Hamburg'
+    port: 'Hamburg',
+    loadingLocation: 'Rotterdam'
   };
 
   test('validates a complete valid lead', () => {
@@ -58,18 +59,19 @@ describe('Lead Schema Validation', () => {
   });
 
   test('rejects lead missing required fields', () => {
-    const incompleteLeads = [
-      { ...validLead, side: undefined },
-      { ...validLead, product: undefined },
-      { ...validLead, price: undefined },
-      { ...validLead, quantity: undefined },
-      { ...validLead, paymentTerms: undefined },
-      { ...validLead, incoterm: undefined },
-      { ...validLead, port: undefined }
+    const base = { ...validLead };
+    const cases = [
+      { ...base, side: undefined },
+      { ...base, product: undefined },
+      { ...base, price: undefined },
+      { ...base, quantity: undefined },
+      { ...base, paymentTerms: undefined },
+      { ...base, incoterm: undefined },
+      // Remove both loading and delivery locations to violate anyOf
+      { ...base, loadingLocation: undefined, deliveryLocation: undefined }
     ];
-
-    incompleteLeads.forEach((lead) => {
-      expect(() => validateLeadData(lead)).toThrow('Invalid lead data');
+    cases.forEach(c => {
+      expect(() => validateLeadData(c)).toThrow('Invalid lead data');
     });
   });
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import * as telemetry from '@/utils/telemetry';
-import { updateConversationState, createConversationState, getPushBackResponse } from '@/lib/conversationState';
+import { updateConversationState, createConversationState, getPushBackResponse, shouldTriggerClosing, applyClosingTrigger } from '@/lib/conversationState';
 
 /**
  * High-level integration style tests around closing + pushback progression.
@@ -14,15 +14,16 @@ describe('Conversation integration (closing + pushback + telemetry)', () => {
     emitSpy.mockClear();
   });
 
-  it('emits closing_triggered after sustained negative sentiment progression', () => {
+  it('detects closing after sustained negative sentiment progression', () => {
     let state = createConversationState('A');
 
     state = updateConversationState(state, "no I'm not interested");
     state = updateConversationState(state, "please stop asking");
     state = updateConversationState(state, "we are done here goodbye");
-
-    // shouldTriggerClosing is evaluated inside hook in app; we simulate by re-calling update until flag set
-    // The library sets closingTriggered internally when patterns match, so assert flag
+    const res = shouldTriggerClosing(state);
+    expect(res.trigger).toBe(true);
+    expect(res.reason).toBeDefined();
+    state = applyClosingTrigger(state, res.reason!);
     expect(state.closingTriggered).toBe(true);
   });
 
