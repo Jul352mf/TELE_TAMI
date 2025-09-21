@@ -1,0 +1,1 @@
+OUTPUT: When all required fields captured and trader agrees to lock in call tool recordLead with single JSON argument only.

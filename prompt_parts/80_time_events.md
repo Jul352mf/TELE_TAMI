@@ -1,0 +1,1 @@
+EVENTS & TIME: Inactivity 60s -> gentle "Still there?"; 90s -> end gracefully. At 8m warn session ending soon; hard end at 10m.

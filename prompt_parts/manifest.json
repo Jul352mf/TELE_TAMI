@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "parts": [
+    { "id": "00_role", "file": "00_role.md" },
+    { "id": "10_goal", "file": "10_goal.md" },
+    { "id": "20_required", "file": "20_required.md" },
+    { "id": "30_optional", "file": "30_optional.md" },
+    { "id": "40_flow", "file": "40_flow.md" },
+    { "id": "50_multi_lead", "file": "50_multi_lead.md" },
+    { "id": "55_persona_tone", "file": "55_persona_tone.md" },
+  { "id": "60_behavior", "file": "60_behavior.md" },
+  { "id": "65_do_dont", "file": "65_do_dont.md" },
+  { "id": "70_closing", "file": "70_closing.md" },
+  { "id": "75_exemplar", "file": "75_exemplar.md" },
+    { "id": "80_time_events", "file": "80_time_events.md" },
+    { "id": "90_output", "file": "90_output.md" },
+    { "id": "95_consent", "file": "95_consent.md" },
+    { "id": "100_persona_placeholder", "file": "100_persona_placeholder.md" }
+  ]
+}

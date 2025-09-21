@@ -1,0 +1,1 @@
+MULTI-LEAD: Handle one lead at a time. After confirming a lead ask if there are more. Maintain clarity which lead is being captured. Do not mix fields across leads.

@@ -5,13 +5,12 @@ import { AnimatePresence, motion } from "motion/react";
 import { Button } from "./ui/button";
 import { Phone } from "lucide-react";
 import { toast } from "sonner";
-import { recordLeadTool, buildSystemPrompt, detectOleMode } from "@/lib/hume";
+import { buildSystemPrompt, detectOleMode, getPromptVersionId } from "@/lib/hume";
 import { buildHumeToolsPayload } from "@/lib/toolRegistry";
 import { normalizeModelId } from "@/lib/models";
 import { emit } from "@/utils/telemetry";
 import { useState, useEffect } from "react";
-import { useLeadDraft } from "@/components/LeadDraftProvider";
-import { normalizeLeadPayload, parsePrice, parseQuantity } from '@/utils/parsers';
+// Draft handling moved to parent (TeleTami) for unified tool interception
 
 interface CallButtonProps {
   accessToken: string;
@@ -32,8 +31,7 @@ export default function CallButton({
 }: CallButtonProps) {
   const { status, connect, messages, sendSessionSettings } = useVoice();
   const [isOleMode, setIsOleMode] = useState(false);
-  const [sessionId] = useState(() => crypto.randomUUID());
-  const { draft, patchDraft, startNewDraft, clearDraft } = useLeadDraft();
+  // Session & draft now managed upstream
   
   // Monitor transcript for "Ole" detection
   useEffect(() => {
@@ -47,82 +45,6 @@ export default function CallButton({
       console.log("Ole mode activated!");
     }
   }, [messages, isOleMode]);
-
-  const handleToolCall = async (name: string, args: any) => {
-    try {
-      if (name === "recordLead") {
-        const payload = {
-          ...args,
-          persona: isOleMode ? "interview" : persona,
-          traderHint: isOleMode ? "Ole detected" : null,
-          sourceCallId: sessionId,
-        };
-        await onToolCall(name, payload);
-        return;
-      }
-      if (process.env.NEXT_PUBLIC_INCREMENTAL_LEADS === '1') {
-        if (name === 'addOrUpdateLeadField') {
-          const { field, value } = args || {};
-            if (!draft) startNewDraft();
-            patchDraft({ [field]: value });
-          return;
-        }
-        if (name === 'confirmFieldValue') {
-          // Currently same as update; could mark confirmation metadata later
-          const { field, value } = args || {};
-          if (!draft) startNewDraft();
-          patchDraft({ [field]: value });
-          return;
-        }
-        if (name === 'getMissingFields') {
-          // No-op: logic resolved in model; could send tool response later
-          return;
-        }
-        if (name === 'getDraftSummary') {
-          return; // summarization handled by model conversationally
-        }
-        if (name === 'finalizeLeadDraft') {
-          // Validate required fields present before calling recordLead
-          const required = ['side','product','price','quantity','paymentTerms','incoterm'];
-          const missing = required.filter(f => !(draft as any)?.[f]);
-          if (missing.length) {
-            toast.error(`Cannot finalize, missing: ${missing.join(', ')}`);
-            return;
-          }
-          // Synthesize payload shaped like recordLead expects (best-effort)
-          const rawPayload = {
-            side: (draft as any)?.side,
-            product: (draft as any)?.product,
-            price: (draft as any)?.price,
-            quantity: (draft as any)?.quantity,
-            paymentTerms: (draft as any)?.paymentTerms,
-            incoterm: (draft as any)?.incoterm,
-            loadingLocation: (draft as any)?.loadingLocation,
-            deliveryLocation: (draft as any)?.deliveryLocation,
-            loadingCountry: (draft as any)?.loadingCountry,
-            deliveryCountry: (draft as any)?.deliveryCountry,
-            packaging: (draft as any)?.packaging,
-            transportMode: (draft as any)?.transportMode,
-            priceValidity: (draft as any)?.priceValidity,
-            availabilityTime: (draft as any)?.availabilityTime,
-            availabilityQty: (draft as any)?.availabilityQty,
-            deliveryTimeframe: (draft as any)?.deliveryTimeframe,
-            summary: (draft as any)?.summary,
-            notes: (draft as any)?.notes,
-            specialNotes: (draft as any)?.specialNotes,
-            traderName: (draft as any)?.traderName,
-          };
-          const payload = normalizeLeadPayload(rawPayload);
-          await onToolCall('recordLead', payload);
-          clearDraft();
-          return;
-        }
-      }
-    } catch (error) {
-      console.error("Error in tool call handler:", error);
-      toast.error("Failed to process tool call");
-    }
-  };
 
   const effectivePersona = spicyMode && persona === "unhinged" ? "unhinged" : persona;
   const systemPrompt = buildSystemPrompt(effectivePersona, isOleMode);
@@ -155,6 +77,11 @@ export default function CallButton({
                   .then(() => {
                     console.log("Connected with persona:", effectivePersona);
                     console.log("System prompt:", systemPrompt);
+                    const pvid = getPromptVersionId();
+                    if (pvid) {
+                      console.log('Prompt version id:', pvid);
+                      emit({ type: 'prompt_version', id: pvid });
+                    }
                     console.log("Voice ID:", voiceId || "(default)");
                     if (changed) {
                       console.warn(`Unsupported model '${modelId}' selected; falling back to 'hume-evi-3'`);

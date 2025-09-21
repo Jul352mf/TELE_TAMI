@@ -48,36 +48,105 @@ export const onLeadCreate = onDocumentCreated("leads/{leadId}", async (event) =>
       return;
     }
 
-    // Prepare row data matching the blueprint order
-    const values = [[
-      new Date().toISOString(), // timestamp
-      lead.side,
-      lead.product,
-      `${lead.price.amount}`,
-      `${lead.price.currency}/${lead.price.per}`,
-      `${lead.quantity.amount} ${lead.quantity.unit}`,
-      lead.paymentTerms,
-      lead.incoterm,
-      lead.port || "",
-      lead.loadingLocation || "",
-      lead.loadingCountry || "",
-      lead.deliveryLocation || "",
-      lead.deliveryCountry || "",
-      lead.packaging || "",
-      lead.transportMode || "",
-      lead.priceValidity || "",
-      lead.availabilityTime || "",
-      lead.availabilityQty || "",
-      lead.deliveryTimeframe || "",
-      lead.transcriptUrl || "",
-      lead.audioUrl || "",
-      lead.summary || "",
-      lead.specialNotes || lead.notes || "",
-      lead.sourceCallId || ""
-    ]];
+    // --- Dynamic schema drift handling ---
+    // We maintain a header row in the sheet. If new keys appear in lead documents,
+    // we append new columns automatically and persist the header mapping to Firestore
+    // (collection: meta/docsheetMappings, doc: leads_header_v1) for audit.
+    const db = admin.firestore();
+    const headerDocRef = db.collection('meta').doc('leads_header_v1');
+    const defaultOrdered = [
+      'timestamp','side','product','price_amount','price_currency_per','quantity_amount_unit','paymentTerms','incoterm','port','loadingLocation','loadingCountry','deliveryLocation','deliveryCountry','packaging','transportMode','priceValidity','availabilityTime','availabilityQty','deliveryTimeframe','transcriptUrl','audioUrl','summary','specialNotes_or_notes','sourceCallId'
+    ];
 
-    // Append to Leads sheet
-  console.log(`Appending lead ${event.params.leadId} to spreadsheet ${spreadsheetId} range Leads!A:AA`);
+    // Fetch existing header row from sheet (first row of Leads)
+    let headerValues: string[] = [];
+    try {
+      const headerResp = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Leads!1:1' });
+      headerValues = (headerResp.data.values && headerResp.data.values[0]) ? headerResp.data.values[0] : [];
+    } catch (e) {
+      console.warn('Failed to read existing header row, will initialize:', (e as any)?.message || e);
+    }
+
+    // Initialize header if empty
+    if (!headerValues.length) {
+      headerValues = defaultOrdered;
+      console.log('Initializing header row for Leads sheet');
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: 'Leads!1:1',
+        valueInputOption: 'RAW',
+        requestBody: { values: [headerValues] }
+      });
+      await headerDocRef.set({ header: headerValues, createdAt: new Date().toISOString() }, { merge: true });
+    }
+
+    // Map incoming lead to flat key/value pairs
+    const flat: Record<string,string> = {};
+    flat.timestamp = new Date().toISOString();
+    flat.side = lead.side || '';
+    flat.product = lead.product || '';
+    if (lead.price) {
+      flat.price_amount = `${lead.price.amount ?? ''}`;
+      flat.price_currency_per = `${lead.price.currency || ''}/${lead.price.per || ''}`;
+    } else {
+      flat.price_amount = '';
+      flat.price_currency_per = '/';
+    }
+    if (lead.quantity) {
+      flat.quantity_amount_unit = `${lead.quantity.amount ?? ''} ${lead.quantity.unit || ''}`.trim();
+    } else flat.quantity_amount_unit = '';
+    flat.paymentTerms = lead.paymentTerms || '';
+    flat.incoterm = lead.incoterm || '';
+    flat.port = lead.port || '';
+    flat.loadingLocation = lead.loadingLocation || '';
+    flat.loadingCountry = lead.loadingCountry || '';
+    flat.deliveryLocation = lead.deliveryLocation || '';
+    flat.deliveryCountry = lead.deliveryCountry || '';
+    flat.packaging = lead.packaging || '';
+    flat.transportMode = lead.transportMode || '';
+    flat.priceValidity = lead.priceValidity || '';
+    flat.availabilityTime = lead.availabilityTime || '';
+    flat.availabilityQty = lead.availabilityQty || '';
+    flat.deliveryTimeframe = lead.deliveryTimeframe || '';
+    flat.transcriptUrl = lead.transcriptUrl || '';
+    flat.audioUrl = lead.audioUrl || '';
+    flat.summary = lead.summary || '';
+    flat.specialNotes_or_notes = lead.specialNotes || lead.notes || '';
+    flat.sourceCallId = lead.sourceCallId || '';
+
+    // Include any additional arbitrary keys (shallow only) not already covered
+    for (const k of Object.keys(lead)) {
+      if (typeof lead[k] === 'object') continue; // skip nested objects except price/quantity already handled
+      if (k in flat) continue;
+      const val = lead[k];
+      flat[k] = (val === undefined || val === null) ? '' : String(val);
+      if (!headerValues.includes(k)) headerValues.push(k); // mark for possible header extension
+    }
+
+    // Detect new columns to append to header row
+    let headerUpdated = false;
+    for (const key of Object.keys(flat)) {
+      if (!headerValues.includes(key)) {
+        headerValues.push(key);
+        headerUpdated = true;
+      }
+    }
+    if (headerUpdated) {
+      console.log('Extending Leads header with new columns:', headerValues.join(', '));
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: 'Leads!1:1',
+        valueInputOption: 'RAW',
+        requestBody: { values: [headerValues] }
+      });
+      await headerDocRef.set({ header: headerValues, updatedAt: new Date().toISOString() }, { merge: true });
+    }
+
+    // Build row in header order
+    const row = headerValues.map(h => flat[h] ?? '');
+    const values = [row];
+
+    console.log(`Appending lead ${event.params.leadId} to spreadsheet ${spreadsheetId} dynamic range Leads!A:ZZ (columns=${headerValues.length})`);
     const maxRetries = 3;
     let attempt = 0;
     let success = false;
@@ -87,8 +156,8 @@ export const onLeadCreate = onDocumentCreated("leads/{leadId}", async (event) =>
         attempt++;
         await sheets.spreadsheets.values.append({
           spreadsheetId,
-          range: "Leads!A:AA",
-          valueInputOption: "USER_ENTERED",
+          range: 'Leads!A:ZZ',
+          valueInputOption: 'USER_ENTERED',
           requestBody: { values }
         });
         success = true;

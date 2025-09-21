@@ -1,0 +1,1 @@
+OPTIONAL FIELDS: loadingLocation, deliveryLocation, loadingCountry, deliveryCountry, packaging, transportMode, priceValidity, availabilityTime, availabilityQty, deliveryTimeframe, summary, notes, specialNotes, traderName
