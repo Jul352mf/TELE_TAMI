@@ -9,7 +9,16 @@ export type TelemetryEvent =
   | { type: 'prompt_version'; id: string }
   | { type: 'tool_call_start'; tool: string; sessionId: string; promptVersionId?: string; persona: string; incremental: boolean }
   | { type: 'tool_call_success'; tool: string; sessionId: string; durationMs: number; promptVersionId?: string; draftFieldCount?: number; missingRequired?: number; persona: string; incremental: boolean }
-  | { type: 'tool_call_error'; tool: string; sessionId: string; durationMs: number; error: string; promptVersionId?: string; draftFieldCount?: number; missingRequired?: number; persona: string; incremental: boolean };
+  | { type: 'tool_call_error'; tool: string; sessionId: string; durationMs: number; error: string; promptVersionId?: string; draftFieldCount?: number; missingRequired?: number; persona: string; incremental: boolean }
+  | { type: 'closing_triggered'; reason: string }
+  | { type: 'recap_requested' }
+  | { type: 'recap_provided' }
+  | { type: 'pushback_used'; variantId: string }
+  | { type: 'strategy_selected'; strategy: string }
+  | { type: 'incremental_fragment_received'; size: number; keys: string[] }
+  | { type: 'incremental_finalized'; totalKeys: number }
+  | { type: 'note_created'; length: number }
+  | { type: 'spec_uploaded'; filename: string; size: number };
 
 // Simple shim; can later route to analytics or Firestore
 export function emit(event: TelemetryEvent) {

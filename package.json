@@ -10,7 +10,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
   "test": "jest",
-  "build:prompt": "npx ts-node scripts/buildPrompt.ts",
+  "build:prompt": "node scripts/buildPrompt.js",
   "lint:prompt": "node scripts/lintPrompt.js",
   "check:prompt": "npm run build:prompt && npm run lint:prompt",
     "test:watch": "jest --watch"

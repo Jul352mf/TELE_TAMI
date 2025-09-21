@@ -1,14 +1,7 @@
-#!/usr/bin/env ts-node
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-import { fileURLToPath } from 'url';
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 
-interface ManifestPart { id: string; file: string; }
-interface Manifest { version: number; parts: ManifestPart[]; }
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
 const partsDir = path.join(root, 'prompt_parts');
 const manifestPath = path.join(partsDir, 'manifest.json');
@@ -16,8 +9,8 @@ const outDir = path.join(root, 'generated');
 const outFile = path.join(outDir, 'compiledPrompt.txt');
 
 function main() {
-  const manifest: Manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  const contents: string[] = [];
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const contents = [];
   for (const p of manifest.parts) {
     const filePath = path.join(partsDir, p.file);
     if (!fs.existsSync(filePath)) throw new Error(`Missing part file: ${p.file}`);
