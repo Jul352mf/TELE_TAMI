@@ -1,6 +1,4 @@
 import { leadJsonSchema } from "./schema";
-import fs from 'fs';
-import path from 'path';
 
 // Hume tool parameters accept a restricted JSON Schema subset.
 // Keep only: type, enum, properties, required, items (object/string), $ref, description.
@@ -165,29 +163,26 @@ export const interviewModePrompt = "Switch to interview mode: You are now pitchi
 
 // System prompt builder
 export function buildSystemPrompt(persona: keyof typeof personaPrompts, isOleMode: boolean = false): string {
-  // If external prompt parts compilation enabled, attempt to load compiled artifact
-  if (process.env.NEXT_PUBLIC_USE_FILE_PROMPTS === '1') {
+  // If external prompt parts compilation enabled, attempt to load compiled artifact (server only)
+  if (process.env.NEXT_PUBLIC_USE_FILE_PROMPTS === '1' && typeof window === 'undefined') {
     try {
+      // lazy require to avoid bundling fs/path into client
+      const fs = require('fs');
+      const path = require('path');
       const compiledPath = path.resolve(process.cwd(), 'generated', 'compiledPrompt.txt');
       if (fs.existsSync(compiledPath)) {
         const raw = fs.readFileSync(compiledPath, 'utf8');
-        // Extract hash comment if present
         const hashMatch = raw.match(/hash=([a-f0-9]{10})/);
         if (hashMatch) (globalThis as any).__PROMPT_VERSION_ID = hashMatch[1];
-        // Persona insertion: replace placeholder line if present
         let assembled = raw.replace(/PERSONA:\s*\(Injected persona style block here during assembly\)\.?/i, 'PERSONA: ' + personaPrompts[persona]);
-        if (isOleMode) {
-          assembled += "\n\nINTERVIEW MODE: " + interviewModePrompt;
-        }
+        if (isOleMode) assembled += "\n\nINTERVIEW MODE: " + interviewModePrompt;
         if (process.env.NEXT_PUBLIC_INCREMENTAL_LEADS === '1') {
           assembled += "\n\nINCREMENTAL MODE: Use addOrUpdateLeadField after each confirmed field; only call finalizeLeadDraft when all required fields are complete. Do NOT call recordLead directly unless incremental tools are disabled.";
           assembled += "\n\nQUERY & CONFIRM: getDraftSummary for recap on request; getMissingFields only when trader asks what's left; confirmFieldValue only immediately after trader explicitly confirms that field.";
           assembled += "\n\nSENTIMENT: If trader sounds frustrated, slow pace, acknowledge concern briefly, then continue focused collection. If enthusiastic, you may accelerate but keep one-field-per-turn discipline.";
         }
         const consentLine = getConsentLine();
-        if (consentLine && !assembled.includes('CONSENT LINE:')) {
-          assembled = assembled + "\n\nCONSENT LINE: " + consentLine;
-        }
+        if (consentLine && !assembled.includes('CONSENT LINE:')) assembled += "\n\nCONSENT LINE: " + consentLine;
         return assembled;
       }
     } catch (err) {

@@ -7,7 +7,7 @@ module.exports = {
     'app/api/**/*.ts',
     '!**/*.d.ts',
   ],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
 };

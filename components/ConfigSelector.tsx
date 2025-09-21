@@ -1,0 +1,80 @@
+"use client";
+import React from 'react';
+import { useSettings } from './SettingsContext';
+
+// Pre-known configs provided by user
+const KNOWN_CONFIGS: { id: string; label: string }[] = [
+  { id: 'c66f0c67-bb61-43b8-bd96-87aae94a6060', label: 'TAMI Default' },
+  { id: 'a14277d3-8b04-490c-bb80-a352ef5d2cc1', label: 'Jules Clone' },
+];
+
+export const ConfigSelector: React.FC = () => {
+  const { settings, setConfigId, setCodeSystemPrompt, setCustomConfigInput, applyCustomConfig } = useSettings();
+
+  const currentConfigValue = settings.configId.mode === 'CUSTOM' ? settings.configId.value : settings.configId.mode;
+  const systemPromptValue = settings.codeSystemPrompt.mode; // DEFAULT | NONE
+
+  return (
+    <div className="w-full max-w-3xl mx-auto border border-neutral-700 rounded-md p-4 text-sm space-y-4 bg-neutral-900/40">
+      <h3 className="font-medium text-neutral-200">Session Configuration</h3>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="flex flex-col gap-1">
+          <span className="text-neutral-400 text-xs uppercase tracking-wide">Hume Config</span>
+          <select
+            className="bg-neutral-900 border border-neutral-700 rounded px-2 py-1"
+            value={currentConfigValue}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === 'DEFAULT') return setConfigId({ mode: 'DEFAULT' });
+              if (v === 'NONE') return setConfigId({ mode: 'NONE' });
+              if (v === 'CUSTOM') return; // handled by custom field
+              setConfigId({ mode: 'CUSTOM', value: v });
+            }}
+          >
+            <option value="DEFAULT">Default (Env)</option>
+            <option value="NONE">None (Global)</option>
+            {KNOWN_CONFIGS.map(c => (
+              <option key={c.id} value={c.id}>{c.label}</option>
+            ))}
+            <option value="CUSTOM">(Custom...)</option>
+          </select>
+          {currentConfigValue === 'CUSTOM' && (
+            <div className="flex gap-2 mt-1">
+              <input
+                placeholder="Paste config UUID"
+                value={settings.customConfigInput || ''}
+                onChange={(e) => setCustomConfigInput(e.target.value)}
+                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1"
+              />
+              <button
+                className="px-3 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-500"
+                onClick={() => applyCustomConfig()}
+              >Apply</button>
+            </div>
+          )}
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-neutral-400 text-xs uppercase tracking-wide">Code System Prompt</span>
+          <select
+            className="bg-neutral-900 border border-neutral-700 rounded px-2 py-1"
+            value={systemPromptValue}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === 'NONE') return setCodeSystemPrompt({ mode: 'NONE' });
+              setCodeSystemPrompt({ mode: 'DEFAULT' });
+            }}
+          >
+            <option value="DEFAULT">Default (Include)</option>
+            <option value="NONE">None (Omit)</option>
+          </select>
+        </label>
+      </div>
+      <p className="text-neutral-500 text-xs leading-relaxed">
+        Strategy: Select a baseline config and optionally layer the code system prompt. Choose None + Custom config to experiment with entirely prompt-in-config. Default (Env) uses <code>NEXT_PUBLIC_HUME_DEFAULT_CONFIG_ID</code> if set.
+      </p>
+    </div>
+  );
+};
+
+export default ConfigSelector;

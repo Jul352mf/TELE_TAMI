@@ -13,3 +13,14 @@ export function normalizeModelId(raw: string | undefined | null): { id: Supporte
   if (SUPPORTED_MODELS.includes(raw as SupportedModel)) return { id: raw as SupportedModel, changed: false };
   return { id: 'hume-evi-3', changed: true };
 }
+
+// Define which of our supported models are known to support tool/function calling via Hume
+// (Assumption: only the native EVI model currently drives tool calls; adjust as provider updates.)
+export function isToolCapable(modelId: string): boolean {
+  return modelId === 'hume-evi-3';
+}
+
+export function ensureToolCapable(modelId: string): { id: SupportedModel; forced: boolean } {
+  if (isToolCapable(modelId)) return { id: modelId as SupportedModel, forced: false };
+  return { id: 'hume-evi-3', forced: true };
+}

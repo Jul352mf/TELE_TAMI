@@ -16,13 +16,18 @@ import { emit, withToolTelemetry } from '@/utils/telemetry';
 import VoiceSelect from "./VoiceSelect";
 import SessionTimers from "./SessionTimers";
 import ModelSelect from "./ModelSelect";
+import { SettingsProvider, useSettings } from './SettingsContext';
+import ConfigSelector from './ConfigSelector';
+import { useConversationState } from '@/hooks/useConversationState';
+import VoiceSpeedSlider from './VoiceSpeedSlider';
 
-export default function TeleTami({ accessToken }: { accessToken: string }) {
+function TeleTamiInner({ accessToken }: { accessToken: string }) {
   const [persona, setPersona] = useState<"professional" | "seductive" | "unhinged" | "cynical">("professional");
   const [spicyMode, setSpicyMode] = useState(false);
   const [voiceId, setVoiceId] = useState<string>("default");
   const [modelId, setModelId] = useState<string>("hume-evi-3");
   const [recipientEmail, setRecipientEmail] = useState<string>("");
+  const [voiceSpeed, setVoiceSpeed] = useState<number | undefined>(undefined);
 
   // Restore persisted settings
   useEffect(() => {
@@ -49,7 +54,8 @@ export default function TeleTami({ accessToken }: { accessToken: string }) {
   const ref = useRef<ComponentRef<typeof Messages> | null>(null);
 
   // Optional: use configId from environment variable
-  const configId = process.env['NEXT_PUBLIC_HUME_CONFIG_ID'];
+  // Config handled via settings now
+  const { settings } = useSettings();
 
   const { draft, patchDraft, startNewDraft, clearDraft } = useLeadDraft();
   const [sessionId] = useState(() => crypto.randomUUID());
@@ -164,6 +170,17 @@ export default function TeleTami({ accessToken }: { accessToken: string }) {
   function SessionUI() {
     const { status } = useVoice();
     const connected = status.value === 'connected';
+    const { state: convState, pendingPushBack, consumePushBack } = useConversationState({ enablePushBack: true });
+    const [localSyntheticMessages, setLocalSyntheticMessages] = useState<string[]>([]);
+
+    useEffect(() => {
+      if (pendingPushBack) {
+        const pb = consumePushBack();
+        if (pb) {
+          setLocalSyntheticMessages(msgs => [...msgs, pb.response]);
+        }
+      }
+    }, [pendingPushBack, consumePushBack]);
 
     if (!connected) {
       // Pre-call minimal centered layout: two vertical sections
@@ -178,8 +195,11 @@ export default function TeleTami({ accessToken }: { accessToken: string }) {
                   persona={persona}
                   spicyMode={spicyMode}
                   voiceId={voiceId}
+                  voiceSpeed={voiceSpeed}
                   modelId={modelId}
                   onToolCall={handleToolCall}
+                  configIdOption={settings.configId}
+                  includeCodeSystemPrompt={settings.codeSystemPrompt.mode !== 'NONE'}
                 />
                 <input
                   type="email"
@@ -191,7 +211,9 @@ export default function TeleTami({ accessToken }: { accessToken: string }) {
               </div>
             </div>
             {/* Bottom section: horizontal settings row */}
-            <div className="w-full flex flex-wrap justify-center gap-6">
+            <div className="w-full flex flex-col gap-6">
+              <ConfigSelector />
+              <div className="w-full flex flex-wrap justify-center gap-6">
               <PersonaToggle
                 value={persona}
                 onChange={setPersona}
@@ -200,6 +222,10 @@ export default function TeleTami({ accessToken }: { accessToken: string }) {
               />
               <VoiceSelect value={voiceId} onChange={setVoiceId} />
               <ModelSelect value={modelId} onChange={setModelId} />
+              <div className="min-w-[260px] max-w-sm">
+                <VoiceSpeedSlider onSpeedChange={setVoiceSpeed} />
+              </div>
+              </div>
             </div>
           </div>
         </div>
@@ -210,7 +236,17 @@ export default function TeleTami({ accessToken }: { accessToken: string }) {
     return (
       <div className="flex flex-col h-screen w-full">
         <SessionTimers />
-        <div className="flex-1 min-h-0 px-4 py-4 max-w-5xl w-full mx-auto flex flex-col">
+        <div className="flex-1 min-h-0 px-4 py-4 max-w-5xl w-full mx-auto flex flex-col gap-3">
+          {convState.closingTriggered && (
+            <div className="text-sm rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-300 px-3 py-2">
+              Closing intent detected. You can wrap up or finalize the lead.
+            </div>
+          )}
+          {localSyntheticMessages.map((m, i) => (
+            <div key={i} className="text-xs rounded bg-muted/30 px-2 py-1 self-center max-w-md text-center">
+              {m}
+            </div>
+          ))}
           <Messages ref={ref} />
         </div>
         <div className="border-t border-muted/20" />
@@ -255,5 +291,13 @@ export default function TeleTami({ accessToken }: { accessToken: string }) {
     >
       <SessionUI />
     </VoiceProvider>
+  );
+}
+
+export default function TeleTami(props: { accessToken: string }) {
+  return (
+    <SettingsProvider>
+      <TeleTamiInner {...props} />
+    </SettingsProvider>
   );
 }
