@@ -21,7 +21,8 @@ export function Select({ label, helper, value, onValueChange, children, classNam
       {label && <label className="text-xs font-medium text-muted-foreground tracking-wide">{label}</label>}
       <RadixSelect.Root value={value} onValueChange={onValueChange} disabled={disabled}>
         <RadixSelect.Trigger disabled={disabled} className={cn(
-          "inline-flex w-full items-center justify-between gap-2 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 h-10 text-sm shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 disabled:pointer-events-none transition-colors data-[placeholder]:text-neutral-500",
+          "inline-flex w-full items-center justify-between gap-2 rounded-md border border-border bg-input px-3 py-2 h-10 text-sm shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none transition-colors data-[placeholder]:text-muted-foreground",
+          "hover:bg-accent/50 dark:hover:bg-accent/30",
           className
         )}>
           <RadixSelect.Value />

@@ -15,13 +15,13 @@ export const ConfigSelector: React.FC = () => {
   const systemPromptValue = settings.codeSystemPrompt.mode; // DEFAULT | NONE
 
   return (
-    <div className="w-full max-w-3xl mx-auto border border-neutral-700 rounded-md p-4 text-sm space-y-4 bg-neutral-900/40">
-      <h3 className="font-medium text-neutral-200">Session Configuration</h3>
+    <div className="w-full max-w-3xl mx-auto border border-border rounded-md p-4 text-sm space-y-4 bg-card/80 backdrop-blur-sm transition-colors">
+      <h3 className="font-medium text-foreground">Session Configuration</h3>
       <div className="grid gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-1">
-          <span className="text-neutral-400 text-xs uppercase tracking-wide">Hume Config</span>
+          <span className="text-muted-foreground text-xs uppercase tracking-wide">Hume Config</span>
           <select
-            className="bg-neutral-900 border border-neutral-700 rounded px-2 py-1"
+            className="bg-input border border-border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring"
             value={currentConfigValue}
             onChange={(e) => {
               const v = e.target.value;
@@ -44,10 +44,10 @@ export const ConfigSelector: React.FC = () => {
                 placeholder="Paste config UUID"
                 value={settings.customConfigInput || ''}
                 onChange={(e) => setCustomConfigInput(e.target.value)}
-                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1"
+                className="flex-1 bg-input border border-border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <button
-                className="px-3 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-500"
+                className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                 onClick={() => applyCustomConfig()}
               >Apply</button>
             </div>
@@ -55,9 +55,9 @@ export const ConfigSelector: React.FC = () => {
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-neutral-400 text-xs uppercase tracking-wide">Code System Prompt</span>
+          <span className="text-muted-foreground text-xs uppercase tracking-wide">Code System Prompt</span>
           <select
-            className="bg-neutral-900 border border-neutral-700 rounded px-2 py-1"
+            className="bg-input border border-border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring"
             value={systemPromptValue}
             onChange={(e) => {
               const v = e.target.value;
@@ -70,7 +70,7 @@ export const ConfigSelector: React.FC = () => {
           </select>
         </label>
       </div>
-      <p className="text-neutral-500 text-xs leading-relaxed">
+      <p className="text-muted-foreground text-xs leading-relaxed">
         Strategy: Select a baseline config and optionally layer the code system prompt. Choose None + Custom config to experiment with entirely prompt-in-config. Default (Env) uses <code>NEXT_PUBLIC_HUME_DEFAULT_CONFIG_ID</code> if set.
       </p>
     </div>

@@ -7,7 +7,7 @@ import PersonaToggle from "./PersonaToggle";
 import CallButton from "./CallButton";
 import Controls from "./Controls";
 import Messages from "./Messages";
-import { recordLeadTool, detectOleMode, getPromptVersionId, buildSystemPrompt } from "@/lib/hume";
+import { getPromptVersionId, buildSystemPrompt } from "@/lib/hume";
 import { generateRecapContent } from '@/lib/conversationState';
 import { toolSuccess, toolError } from "@/lib/toolRegistry";
 import { useLeadDraft } from "@/components/LeadDraftProvider";
@@ -43,7 +43,7 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
     const wrapperRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-      if (!open) return;
+        if (!open) return; 
       const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
       const onClick = (e: MouseEvent) => {
         if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
@@ -53,7 +53,7 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
       return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('mousedown', onClick); };
     }, [open]);
 
-    return (
+    return ( 
   <div className="flex flex-col gap-1" ref={wrapperRef}>
         <button
           type="button"
@@ -61,10 +61,10 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen(o => !o)}
-          className="h-10 w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 text-sm text-neutral-200 flex items-center justify-between hover:border-neutral-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+          className="h-10 w-full rounded-md border border-border bg-input px-3 text-sm text-foreground flex items-center justify-between hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
         >
             <span className="sr-only">Voice Speed</span>
-          <span className="flex items-center gap-2 text-xs text-neutral-300">
+          <span className="flex items-center gap-2 text-xs text-muted-foreground">
             {current.toFixed(1)}x
             <svg aria-hidden="true" className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
           </span>
@@ -72,7 +72,7 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
         {open && (
           <div
             id={panelId}
-            className="rounded-md border border-neutral-700 bg-neutral-900 p-4 flex flex-col gap-4 shadow-lg animate-in fade-in"
+            className="rounded-md border border-border bg-popover p-4 flex flex-col gap-4 shadow-lg animate-in fade-in"
           >
             {/* Radix slider alternative: simple custom track for now replaced soon */}
             <div className="flex items-center gap-3 select-none">
@@ -86,7 +86,7 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
                 className="w-full"
               />
             </div>
-            <div className="flex justify-between text-[10px] text-neutral-400 font-mono">
+            <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
               <span>0.5x</span>
               <span>{current.toFixed(1)}x</span>
               <span>2.0x</span>
@@ -100,12 +100,12 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
   const AdvancedSessionConfig: React.FC<{ label: string }> = ({ label }) => {
     const [open, setOpen] = useState(false);
     return (
-      <div className="border border-neutral-700 rounded-md bg-neutral-900">
+  <div className="border border-border rounded-md bg-card transition-colors">
         <button
           type="button"
           onClick={() => setOpen(o => !o)}
           aria-expanded={open}
-          className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-neutral-300 bg-neutral-900 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-md transition-colors"
+          className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-foreground/80 bg-card hover:bg-accent/60 focus:outline-none focus:ring-2 focus:ring-ring rounded-md transition-colors"
         >
           <span>{label}</span>
           <span className="text-xs text-neutral-500">{open ? 'Hide' : 'Show'}</span>
@@ -113,7 +113,7 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
         {open && (
           <div className="px-4 pb-4 pt-2 flex flex-col gap-3 text-sm">
             <ConfigSelector />
-            <p className="text-[11px] text-neutral-500 leading-relaxed">Select or layer configuration options. More tuning controls (sampling, prompt variants) will appear here later.</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">Select or layer configuration options. More tuning controls (sampling, prompt variants) will appear here later.</p>
           </div>
         )}
       </div>
@@ -278,7 +278,7 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
 
     if (!connected) {
       return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-black px-6">
+        <div className="min-h-screen w-full flex items-center justify-center bg-background px-6 transition-colors">
           <div className="w-full max-w-lg mx-auto flex flex-col items-center gap-8">
             {/* Call Button */}
             <CallButton
@@ -329,9 +329,9 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
                 placeholder="Email to receive lead (optional)"
                 value={recipientEmail}
                 onChange={(e) => setRecipientEmail(e.target.value)}
-                className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-md border border-border bg-input px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
-              <p className="text-[11px] text-neutral-500 leading-tight">We’ll send captured lead details to this address (optional).</p>
+              <p className="text-[11px] text-muted-foreground leading-tight">We’ll send captured lead details to this address (optional).</p>
             </div>
           </div>
         </div>
@@ -340,18 +340,16 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
 
     // Connected session view
     return (
-      <div className="flex flex-col h-screen w-full">
+      <div className="flex flex-col h-screen w-full bg-background text-foreground transition-colors">
         <SessionTimers />
-  <div className="flex-1 min-h-0 px-4 py-4 max-w-5xl w-full mx-auto flex flex-col gap-3">
+        <div className="flex-1 min-h-0 px-4 py-4 max-w-5xl w-full mx-auto flex flex-col gap-3">
           {convState.closingTriggered && (
-            <div className="text-sm rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-300 px-3 py-2">
+            <div className="text-sm rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-300 px-3 py-2 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-200">
               Closing intent detected. You can wrap up or finalize the lead.
             </div>
           )}
           {localSyntheticMessages.map((m, i) => (
-            <div key={i} className="text-xs rounded bg-muted/30 px-2 py-1 self-center max-w-md text-center">
-              {m}
-            </div>
+            <div key={i} className="text-xs rounded bg-muted px-2 py-1 self-center max-w-md text-center text-muted-foreground/90">{m}</div>
           ))}
           <div className="flex justify-end gap-2 pr-2">
             {completedLeads.length > 0 && (
@@ -362,7 +360,7 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
                   setLocalSyntheticMessages(msgs => [...msgs, recap]);
                   emit({ type: 'recap_provided' });
                 }}
-                className="text-xs px-2 py-1 rounded bg-neutral-800 border border-neutral-700 hover:bg-neutral-700 transition"
+                className="text-xs px-2 py-1 rounded bg-secondary border border-border hover:bg-secondary/80 transition-colors"
               >Recap Leads</button>
             )}
           </div>
