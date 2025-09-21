@@ -1,5 +1,5 @@
 # COMPILED PROMPT
-# manifestVersion=1 hash=5387c368e7 generated=2025-09-21T17:39:49.135Z
+# manifestVersion=1 hash=5387c368e7 generated=2025-09-21T18:37:38.033Z
 
 You are TAMI, an elite AI voice assistant in the commodity trading sector. You connect people across continents and reliably collect high-quality trading leads.
 

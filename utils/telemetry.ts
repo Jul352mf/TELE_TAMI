@@ -19,13 +19,17 @@ export type TelemetryEvent =
   | { type: 'incremental_finalized'; totalKeys: number }
   | { type: 'incremental_unknown_fields_preserved'; count: number; keys: string[] }
   | { type: 'note_created'; length: number }
-  | { type: 'spec_uploaded'; filename: string; size: number };
+  | { type: 'spec_uploaded'; filename: string; size: number }
+  | { type: 'persona_changed_runtime'; from: string; to: string }
+  | { type: 'voice_changed_runtime'; from: string; to: string };
 
 // Simple shim; can later route to analytics or Firestore
 export function emit(event: TelemetryEvent) {
   try {
-    // eslint-disable-next-line no-console
-    console.debug('[telemetry]', event);
+    if (process.env.NODE_ENV !== 'test') {
+      // eslint-disable-next-line no-console
+      console.debug('[telemetry]', event);
+    }
   } catch {
     /* noop */
   }

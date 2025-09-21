@@ -18,9 +18,8 @@ import { useState, useEffect } from "react";
 interface CallButtonProps {
   accessToken: string;
   persona: "professional" | "seductive" | "unhinged" | "cynical";
-  spicyMode: boolean;
   voiceId?: string;
-  voiceSpeed?: number; // multiplier e.g. 0.5 - 2.0
+  voiceSpeed?: number;
   modelId?: string;
   onToolCall: (name: string, args: any) => Promise<void>;
   configIdOption?: TriOption<string>;
@@ -30,7 +29,6 @@ interface CallButtonProps {
 export default function CallButton({
   accessToken,
   persona,
-  spicyMode,
   voiceId,
   voiceSpeed,
   onToolCall,
@@ -53,7 +51,7 @@ export default function CallButton({
     }
   }, [messages, isOleMode]);
 
-  const effectivePersona = spicyMode && persona === 'unhinged' ? 'unhinged' : persona;
+  const effectivePersona = persona;
   const chosenStrategy = resolveStrategy();
   const basePrompt = includeCodeSystemPrompt ? buildSystemPrompt(effectivePersona, isOleMode) : undefined;
   const strategyMods = chosenStrategy ? getStrategyPromptModifications(chosenStrategy) : [];

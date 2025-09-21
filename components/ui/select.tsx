@@ -16,11 +16,11 @@ export interface SelectRootProps {
 
 export function Select({ label, helper, value, onValueChange, children, className, containerClassName }: SelectRootProps) {
   return (
-    <div className={cn("flex flex-col gap-1 min-w-[180px]", containerClassName)}>
-      {label && <label className="text-xs font-medium text-muted-foreground tracking-wide">{label}</label>}
+    <div className={cn("flex flex-col gap-1 min-w-[150px] w-full", containerClassName)}>
+      {label && <label className="text-[11px] font-medium text-muted-foreground tracking-wide flex items-center gap-1">{label}</label>}
       <RadixSelect.Root value={value} onValueChange={onValueChange}>
         <RadixSelect.Trigger className={cn(
-          "inline-flex w-full items-center justify-between gap-2 rounded-md border border-input bg-background/70 backdrop-blur-sm px-3 py-2 text-sm shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50 disabled:pointer-events-none transition-colors data-[placeholder]:text-muted-foreground",
+          "inline-flex w-full items-center justify-between gap-2 rounded-md border border-neutral-700/60 bg-neutral-900/70 dark:bg-neutral-900 px-3 py-1.5 text-sm h-9 shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 disabled:pointer-events-none transition-colors data-[placeholder]:text-muted-foreground",
           className
         )}>
           <RadixSelect.Value />
@@ -29,7 +29,7 @@ export function Select({ label, helper, value, onValueChange, children, classNam
           </RadixSelect.Icon>
         </RadixSelect.Trigger>
         <RadixSelect.Portal>
-          <RadixSelect.Content className="z-50 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-lg animate-in fade-in-0 zoom-in-95">
+          <RadixSelect.Content className="z-50 overflow-hidden rounded-md border border-neutral-700/70 bg-neutral-900 text-popover-foreground shadow-lg animate-in fade-in-0 zoom-in-95">
             <RadixSelect.Viewport className="p-1">
               {children}
             </RadixSelect.Viewport>

@@ -21,15 +21,17 @@ import SessionTimers from "./SessionTimers";
 import ModelSelect from "./ModelSelect";
 import { SettingsProvider, useSettings } from './SettingsContext';
 import ConfigSelector from './ConfigSelector';
+import { ChevronDown } from 'lucide-react';
 import { useConversationState } from '@/hooks/useConversationState';
-import VoiceSpeedSlider from './VoiceSpeedSlider';
+import VoiceSpeedControl from './VoiceSpeedControl';
 import NotesComponent from './NotesComponent';
 import SpecFileUpload from './SpecFileUpload';
 import InfoTooltip from './InfoTooltip';
+import { useCallback } from 'react';
+import { cn } from '@/utils';
 
 function TeleTamiInner({ accessToken }: { accessToken: string }) {
   const [persona, setPersona] = useState<"professional" | "seductive" | "unhinged" | "cynical">("professional");
-  const [spicyMode, setSpicyMode] = useState(false);
   const [voiceId, setVoiceId] = useState<string>("default");
   const [modelId, setModelId] = useState<string>("hume-evi-3");
   const [recipientEmail, setRecipientEmail] = useState<string>("");
@@ -40,9 +42,8 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
     try {
       const stored = localStorage.getItem('tami:settings:v1');
       if (stored) {
-        const { persona, spicyMode, voiceId, modelId } = JSON.parse(stored);
+  const { persona, voiceId, modelId } = JSON.parse(stored);
         if (persona) setPersona(persona);
-        if (typeof spicyMode === 'boolean') setSpicyMode(spicyMode);
         if (voiceId) setVoiceId(voiceId);
         if (modelId) setModelId(modelId);
       }
@@ -52,10 +53,10 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
   // Persist settings debounced
   useEffect(() => {
     const t = window.setTimeout(() => {
-      try { localStorage.setItem('tami:settings:v1', JSON.stringify({ persona, spicyMode, voiceId, modelId })); } catch { /* ignore */ }
+  try { localStorage.setItem('tami:settings:v1', JSON.stringify({ persona, voiceId, modelId })); } catch { /* ignore */ }
     }, 250);
     return () => window.clearTimeout(t);
-  }, [persona, spicyMode, voiceId, modelId]);
+  }, [persona, voiceId, modelId]);
   const timeout = useRef<number | null>(null);
   const ref = useRef<ComponentRef<typeof Messages> | null>(null);
 
@@ -71,6 +72,18 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
 
   // Build system prompt for telemetry correlation (reuse logic)
   const systemPrompt = buildSystemPrompt(persona, isOleMode);
+  // Baselines for drift detection
+  const baselinePersonaRef = useRef(persona);
+  const baselineVoiceRef = useRef<string | undefined>(undefined);
+  if (baselineVoiceRef.current === undefined) baselineVoiceRef.current = voiceId;
+
+  // Drift detection: watch for persona changes post-connect (UI-side state changes are user-driven, we only warn on assistant-side indicators)
+  useEffect(() => {
+    if (persona !== baselinePersonaRef.current) {
+      emit({ type: 'persona_changed_runtime', from: baselinePersonaRef.current, to: persona });
+      baselinePersonaRef.current = persona; // update so we don't spam; future improvement: gate on connection state
+    }
+  }, [persona]);
 
   // Handle tool calls from EVI with telemetry & metrics
   const handleToolCall = async (name: string, args: any) => {
@@ -190,30 +203,64 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
       }
     }, [pendingPushBack, consumePushBack]);
 
-    // Live apply voice speed when connected and slider changes
+    // Track latest voice settings in refs to satisfy lint rules while allowing reactive updates
+  const latestVoiceId = useRef(voiceId);
+  latestVoiceId.current = voiceId;
+  const latestVoiceSpeed = useRef(voiceSpeed);
+  latestVoiceSpeed.current = voiceSpeed;
+
+    // Live apply voice speed when connected and slider changes (preserve selected voice id)
     useEffect(() => {
-      if (connected && voiceSpeed && typeof voiceSpeed === 'number') {
+      if (!connected) return;
+      const speed = latestVoiceSpeed.current;
+      if (speed && typeof speed === 'number') {
         try {
-          // Library typing may not expose partial voice updates; cast to any
-          sendSessionSettings({ voice: { speed: voiceSpeed } } as any);
+          const vid = latestVoiceId.current;
+          const voicePayload: any = { speed };
+            if (vid && vid !== 'default') voicePayload.id = vid;
+          sendSessionSettings({ voice: voicePayload } as any);
         } catch (e) {
           console.warn('Failed to apply live voice speed', e);
         }
       }
-    }, [connected, voiceSpeed, sendSessionSettings]);
+    }, [connected, sendSessionSettings]);
+
+    // Apply voice change mid-call (include current speed if set)
+    useEffect(() => {
+      if (!connected) return;
+      try {
+        const vid = latestVoiceId.current;
+        if (vid && vid !== 'default') {
+          const speed = latestVoiceSpeed.current;
+          const voicePayload: any = { id: vid };
+          if (speed && typeof speed === 'number') voicePayload.speed = speed;
+          sendSessionSettings({ voice: voicePayload } as any);
+        }
+      } catch (e) {
+        console.warn('Failed to apply voice id change', e);
+      }
+    }, [connected, sendSessionSettings]);
+
+    // Voice drift detection: if runtime selected voice diverges from baseline (initial) emit telemetry once
+    useEffect(() => {
+      if (!connected) return; // only care during active session
+      if (baselineVoiceRef.current && latestVoiceId.current && baselineVoiceRef.current !== latestVoiceId.current) {
+        emit({ type: 'voice_changed_runtime', from: baselineVoiceRef.current, to: latestVoiceId.current });
+        baselineVoiceRef.current = latestVoiceId.current; // advance baseline to avoid repeat spam
+      }
+  }, [connected]);
 
     if (!connected) {
-      // Pre-call minimal centered layout: two vertical sections
+      // Mobile-first layout: scrollable settings, sticky bottom action bar
       return (
-        <div className="min-h-screen w-full flex items-center justify-center px-4">
-          <div className="w-full max-w-3xl flex flex-col items-center gap-10">
-            {/* Top section: Call button */}
-            <div className="w-full flex justify-center">
-              <div className="flex flex-col items-center gap-3 w-full">
+        <div className="min-h-screen w-full flex flex-col lg:items-center lg:justify-start px-4">
+          {/* Desktop call area */}
+          <div className="hidden lg:block w-full max-w-3xl mx-auto pt-10">
+            <div className="flex items-start gap-4">
+              <div className="flex flex-col gap-3">
                 <CallButton
                   accessToken={accessToken}
                   persona={persona}
-                  spicyMode={spicyMode}
                   voiceId={voiceId}
                   voiceSpeed={voiceSpeed}
                   modelId={modelId}
@@ -230,35 +277,56 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
                 />
               </div>
             </div>
-            {/* Bottom section: horizontal settings row */}
-            <div className="w-full flex flex-col gap-6">
-              <div className="flex items-center gap-2">
-                <ConfigSelector />
-                <InfoTooltip content="Select which backend configuration / prompt variant to use for this session." side="right" />
+          </div>
+          <div className="flex-1 w-full max-w-3xl mx-auto pt-6 pb-28 lg:pb-16 flex flex-col gap-6 overflow-y-auto">
+            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1">
+                  <PersonaToggle value={persona} onChange={setPersona} />
+                  <InfoTooltip content="Change the persona tone / negotiation style." side="top" />
+                </div>
               </div>
-              <div className="w-full flex flex-wrap justify-center gap-6">
-                <div className="flex items-center gap-2">
-                  <PersonaToggle
-                    value={persona}
-                    onChange={setPersona}
-                    spicyMode={spicyMode}
-                    onSpicyModeChange={setSpicyMode}
-                  />
-                  <InfoTooltip content="Change the persona tone. This affects wording and negotiation style." side="top" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <VoiceSelect value={voiceId} onChange={setVoiceId} />
-                  <InfoTooltip content="Choose the synthesis voice used for responses." side="top" />
-                </div>
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1">
                   <ModelSelect value={modelId} onChange={setModelId} />
-                  <InfoTooltip content="Select the reasoning model powering the assistant." side="top" />
-                </div>
-                <div className="min-w-[260px] max-w-sm flex items-center gap-2">
-                  <VoiceSpeedSlider onSpeedChange={setVoiceSpeed} />
-                  <InfoTooltip content="Adjust real-time speech rate. Will apply on next utterance." side="top" />
+                  <InfoTooltip content="Reasoning model backing the assistant." side="top" />
                 </div>
               </div>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1">
+                  <VoiceSelect value={voiceId} onChange={setVoiceId} />
+                  <InfoTooltip content="Synthesis voice for responses." side="top" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1">
+                  <VoiceSpeedControl onChange={setVoiceSpeed} />
+                  <InfoTooltip content="Speech rate for audio output." side="top" />
+                </div>
+              </div>
+            </div>
+            <AdvancedSessionConfig />
+          </div>
+          {/* Sticky mobile action bar */}
+          <div className="fixed lg:hidden bottom-0 left-0 right-0 z-20 bg-neutral-950/85 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/70 border-t border-neutral-800">
+            <div className="max-w-3xl mx-auto px-4 py-4 flex flex-col items-center gap-3">
+              <CallButton
+                accessToken={accessToken}
+                persona={persona}
+                voiceId={voiceId}
+                voiceSpeed={voiceSpeed}
+                modelId={modelId}
+                onToolCall={handleToolCall}
+                configIdOption={settings.configId}
+                includeCodeSystemPrompt={settings.codeSystemPrompt.mode !== 'NONE'}
+              />
+              <input
+                type="email"
+                placeholder="Email to receive lead (optional)"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                className="w-full max-w-sm rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
             </div>
           </div>
         </div>
@@ -353,5 +421,48 @@ export default function TeleTami(props: { accessToken: string }) {
     <SettingsProvider>
       <TeleTamiInner {...props} />
     </SettingsProvider>
+  );
+}
+
+// Collapsible advanced session configuration panel
+function AdvancedSessionConfig() {
+  const [open, setOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try { return localStorage.getItem('tami:advPanel') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('tami:advPanel', open ? '1' : '0'); } catch { /* ignore */ }
+  }, [open]);
+  return (
+    <div className="w-full">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="group w-full flex items-center justify-between rounded-md border border-neutral-700/60 bg-neutral-900/70 dark:border-neutral-700 dark:bg-neutral-900 px-3 py-2 text-sm font-medium hover:bg-neutral-800/70 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        aria-expanded={open}
+        aria-controls="advanced-config-panel"
+      >
+        <span className="flex items-center gap-2">
+          <ChevronDown className={cn('size-4 transition-transform', open ? 'rotate-180' : '')} />
+          Session Config
+        </span>
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{open ? 'Hide' : 'Show'}</span>
+      </button>
+      <div
+        id="advanced-config-panel"
+        className={cn('overflow-hidden transition-all', open ? 'mt-3 max-h-[600px] opacity-100' : 'max-h-0 opacity-0')}
+        aria-hidden={!open}
+      >
+        <div className="rounded-md border border-neutral-700/60 dark:border-neutral-700 bg-neutral-900/60 dark:bg-neutral-900 p-4 flex flex-col gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <ConfigSelector />
+            <InfoTooltip content="Select which backend configuration / prompt variant to use for this session." side="right" />
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Configuration determines tool availability, model constraints, and certain prompt scaffolding features. Adjust only if you know which experimental profile to use.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

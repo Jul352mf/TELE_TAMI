@@ -48,7 +48,7 @@ describe('Lead Schema Validation', () => {
   test('rejects lead with invalid currency', () => {
     const invalidLead = { 
       ...validLead, 
-      price: { ...validLead.price, currency: 'USD' }
+      price: { ...validLead.price, currency: 'XYZ' as any }
     };
     expect(() => validateLeadData(invalidLead)).toThrow('Invalid lead data');
   });
@@ -91,11 +91,19 @@ describe('Lead Schema Validation', () => {
   test('accepts both mt and kg units', () => {
     const leadWithKg = {
       ...validLead,
-      price: { amount: 2.25, currency: 'CHF', per: 'kg' },
+      price: { amount: 2.25, currency: 'USD', per: 'kg' },
       quantity: { amount: 500000, unit: 'kg' }
     };
     
     expect(() => validateLeadData(leadWithKg)).not.toThrow();
+  });
+
+  test('accepts multiple allowed currencies', () => {
+    const currencies = ['USD','EUR','GBP','CHF','JPY'];
+    currencies.forEach(cur => {
+      const lead = { ...validLead, price: { ...validLead.price, currency: cur as any } };
+      expect(() => validateLeadData(lead)).not.toThrow();
+    });
   });
 
   test('validates all valid Incoterms 2020', () => {

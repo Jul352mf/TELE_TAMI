@@ -11,7 +11,7 @@ export const leadJsonSchema = {
       "type": "object",
       "properties": {
         "amount": { "type": "number" },
-        "currency": { "type": "string", "enum": ["CHF"] },
+        "currency": { "type": "string", "enum": ["USD","EUR","GBP","CHF","JPY","CNY","AUD","CAD","INR","AED","SAR","ZAR"] },
         "per": { "type": "string", "enum": ["mt", "kg"] }
       },
       "required": ["amount", "currency", "per"]
@@ -63,7 +63,7 @@ export interface Lead {
   product: string;
   price: {
     amount: number;
-    currency: "CHF";
+    currency: "USD"|"EUR"|"GBP"|"CHF"|"JPY"|"CNY"|"AUD"|"CAD"|"INR"|"AED"|"SAR"|"ZAR";
     per: "mt" | "kg";
   };
   quantity: {
