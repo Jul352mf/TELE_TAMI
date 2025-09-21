@@ -35,6 +35,8 @@ interface LeadDraftContextValue {
   clearDraft: () => void;
   addReasonCode: (code: string) => void;
   removeReasonCode: (code: string) => void;
+  completedLeads: LeadDraft[];
+  addCompletedLead: (lead: LeadDraft) => void;
 }
 
 const LeadDraftContext = createContext<LeadDraftContextValue | undefined>(undefined);
@@ -45,6 +47,7 @@ function uuid() {
 
 export const LeadDraftProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [draft, setDraft] = useState<LeadDraft | null>(null);
+  const [completedLeads, setCompletedLeads] = useState<LeadDraft[]>([]);
   const saveTimer = useRef<number | null>(null);
 
   // Restore on mount
@@ -107,8 +110,12 @@ export const LeadDraftProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   }, []);
 
+  const addCompletedLead = useCallback((lead: LeadDraft) => {
+    setCompletedLeads(prev => [...prev, lead]);
+  }, []);
+
   return (
-    <LeadDraftContext.Provider value={{ draft, startNewDraft, patchDraft, clearDraft, addReasonCode, removeReasonCode }}>
+    <LeadDraftContext.Provider value={{ draft, startNewDraft, patchDraft, clearDraft, addReasonCode, removeReasonCode, completedLeads, addCompletedLead }}>
       {children}
     </LeadDraftContext.Provider>
   );

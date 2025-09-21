@@ -7,6 +7,7 @@ import { cn } from "@/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LeadDraftProvider } from "@/components/LeadDraftProvider";
+import AccessibilityEnhancer, { accessibilityStyles } from '@/components/AccessibilityEnhancer';
 
 export const metadata: Metadata = {
   title: "Hume AI - EVI - Next.js Starter",
@@ -20,6 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: accessibilityStyles }} />
+      </head>
       <body
         className={cn(
           GeistSans.variable,
@@ -34,6 +38,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <LeadDraftProvider>
+            <AccessibilityEnhancer />
             <Nav />
             {children}
             <Toaster position="top-center" richColors={true} />

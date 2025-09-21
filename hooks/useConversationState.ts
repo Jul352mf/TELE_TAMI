@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useVoice } from '@humeai/voice-react';
 import { createConversationState, updateConversationState, getPushBackResponse, recordPushBackUsage, ConversationState } from '@/lib/conversationState';
+import { emit } from '@/utils/telemetry';
 
 interface UseConversationOpts {
   strategy?: 'A' | 'B' | 'C' | 'D' | 'E';
@@ -25,13 +26,16 @@ export function useConversationState(opts: UseConversationOpts = {}) {
 
     setState(prev => {
       const next = updateConversationState(prev, newest.message?.content || '');
+      if (!prev.closingTriggered && next.closingTriggered) {
+        emit({ type: 'closing_triggered', reason: 'model_detected' });
+      }
       if (opts.enablePushBack && !next.closingTriggered) {
         const { response, variantId } = getPushBackResponse(next);
         if (response && variantId) {
-          // Record usage and queue push-back
-            const after = recordPushBackUsage(next, variantId);
-            setPendingPushBack({ response, variantId });
-            return after;
+          const after = recordPushBackUsage(next, variantId);
+          setPendingPushBack({ response, variantId });
+          emit({ type: 'pushback_used', variantId });
+          return after;
         }
       }
       return next;

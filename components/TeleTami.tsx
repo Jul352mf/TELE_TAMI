@@ -8,11 +8,14 @@ import CallButton from "./CallButton";
 import Controls from "./Controls";
 import Messages from "./Messages";
 import { recordLeadTool, detectOleMode, getPromptVersionId, buildSystemPrompt } from "@/lib/hume";
+import { generateRecapContent } from '@/lib/conversationState';
 import { toolSuccess, toolError } from "@/lib/toolRegistry";
 import { useLeadDraft } from "@/components/LeadDraftProvider";
 import { normalizeLeadPayload } from '@/utils/parsers';
 import { inc as incMetric } from '@/utils/metrics';
 import { emit, withToolTelemetry } from '@/utils/telemetry';
+import { shouldUseIncrementalMode } from '@/lib/strategyHarness';
+import { acceptFragment, finalizeDraft } from '@/lib/incrementalJson';
 import VoiceSelect from "./VoiceSelect";
 import SessionTimers from "./SessionTimers";
 import ModelSelect from "./ModelSelect";
@@ -20,6 +23,9 @@ import { SettingsProvider, useSettings } from './SettingsContext';
 import ConfigSelector from './ConfigSelector';
 import { useConversationState } from '@/hooks/useConversationState';
 import VoiceSpeedSlider from './VoiceSpeedSlider';
+import NotesComponent from './NotesComponent';
+import SpecFileUpload from './SpecFileUpload';
+import InfoTooltip from './InfoTooltip';
 
 function TeleTamiInner({ accessToken }: { accessToken: string }) {
   const [persona, setPersona] = useState<"professional" | "seductive" | "unhinged" | "cynical">("professional");
@@ -57,10 +63,11 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
   // Config handled via settings now
   const { settings } = useSettings();
 
-  const { draft, patchDraft, startNewDraft, clearDraft } = useLeadDraft();
+  const { draft, patchDraft, startNewDraft, clearDraft, completedLeads, addCompletedLead } = useLeadDraft();
   const [sessionId] = useState(() => crypto.randomUUID());
   const [isOleMode, setIsOleMode] = useState(false);
-  const incremental = process.env.NEXT_PUBLIC_INCREMENTAL_LEADS === '1';
+  const incremental = shouldUseIncrementalMode();
+  const [draftId, setDraftId] = useState(() => crypto.randomUUID());
 
   // Build system prompt for telemetry correlation (reuse logic)
   const systemPrompt = buildSystemPrompt(persona, isOleMode);
@@ -96,49 +103,47 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
         return;
       }
       if (incremental) {
-        if (name === 'addOrUpdateLeadField') {
+        if (name === 'addOrUpdateLeadField' || name === 'confirmFieldValue') {
           const { field, value } = args || {};
-            if (!draft) { startNewDraft(); incMetric('leadsStarted'); }
-            patchDraft({ [field]: value });
-          return;
-        }
-        if (name === 'confirmFieldValue') {
-          const { field, value } = args || {};
-          if (!draft) startNewDraft();
+          if (!draft) { startNewDraft(); incMetric('leadsStarted'); }
+          // Accept fragment into backend incremental store
+          acceptFragment(draftId, sessionId, { [field]: value });
+          // Keep local draft (UI/recap)
           patchDraft({ [field]: value });
-          incMetric('confirmations');
+          if (name === 'confirmFieldValue') incMetric('confirmations');
           return;
         }
-        if (name === 'getMissingFields') return;
-        if (name === 'getDraftSummary') return;
+        if (name === 'getMissingFields' || name === 'getDraftSummary') {
+          // Future: could surface incrementalJson state; noop for now
+          return;
+        }
         if (name === 'finalizeLeadDraft') {
-          const missing = required.filter(f => !(draft as any)?.[f]);
+          const result = finalizeDraft(draftId);
+          if (!result) {
+            toast.error('No active draft to finalize');
+            throw new Error('no_active_draft');
+          }
+            const { finalData, unknownFields } = result;
+          if (unknownFields && Object.keys(unknownFields).length) {
+            emit({
+              type: 'incremental_unknown_fields_preserved',
+              count: Object.keys(unknownFields).length,
+              keys: Object.keys(unknownFields)
+            });
+          }
+          // Merge unknown fields into notes for preservation
+          if (Object.keys(unknownFields).length) {
+            const unknownNote = Object.entries(unknownFields)
+              .map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`)
+              .join('; ');
+            finalData.notes = finalData.notes ? `${finalData.notes}\nOther: ${unknownNote}` : `Other: ${unknownNote}`;
+          }
+          const missing = required.filter(f => !(finalData as any)?.[f]);
           if (missing.length) {
             toast.error(`Cannot finalize, missing: ${missing.join(', ')}`);
             throw new Error('missing_required');
           }
-          const rawPayload = {
-            side: (draft as any)?.side,
-            product: (draft as any)?.product,
-            price: (draft as any)?.price,
-            quantity: (draft as any)?.quantity,
-            paymentTerms: (draft as any)?.paymentTerms,
-            incoterm: (draft as any)?.incoterm,
-            loadingLocation: (draft as any)?.loadingLocation,
-            deliveryLocation: (draft as any)?.deliveryLocation,
-            loadingCountry: (draft as any)?.loadingCountry,
-            deliveryCountry: (draft as any)?.deliveryCountry,
-            packaging: (draft as any)?.packaging,
-            transportMode: (draft as any)?.transportMode,
-            priceValidity: (draft as any)?.priceValidity,
-            availabilityTime: (draft as any)?.availabilityTime,
-            availabilityQty: (draft as any)?.availabilityQty,
-            deliveryTimeframe: (draft as any)?.deliveryTimeframe,
-            summary: (draft as any)?.summary,
-            notes: (draft as any)?.notes,
-            specialNotes: (draft as any)?.specialNotes,
-            traderName: (draft as any)?.traderName,
-          };
+          const rawPayload = { ...finalData };
           const payload = {
             ...normalizeLeadPayload(rawPayload),
             promptVersionId,
@@ -153,8 +158,11 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
           if (response.ok) {
             toast.success('Lead captured & emailed!');
             incMetric('leadsCompleted');
+            if (draft) addCompletedLead(draft as any);
             clearDraft();
             emit({ type: 'lead_tool_called' });
+            // Rotate draft id for next lead
+            setDraftId(crypto.randomUUID());
           } else {
             const error = await response.json();
             toast.error(`Failed to capture lead: ${error.error}`);
@@ -168,7 +176,7 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
 
   // Inner component consuming voice status (must be inside provider)
   function SessionUI() {
-    const { status } = useVoice();
+    const { status, sendSessionSettings } = useVoice();
     const connected = status.value === 'connected';
     const { state: convState, pendingPushBack, consumePushBack } = useConversationState({ enablePushBack: true });
     const [localSyntheticMessages, setLocalSyntheticMessages] = useState<string[]>([]);
@@ -181,6 +189,18 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
         }
       }
     }, [pendingPushBack, consumePushBack]);
+
+    // Live apply voice speed when connected and slider changes
+    useEffect(() => {
+      if (connected && voiceSpeed && typeof voiceSpeed === 'number') {
+        try {
+          // Library typing may not expose partial voice updates; cast to any
+          sendSessionSettings({ voice: { speed: voiceSpeed } } as any);
+        } catch (e) {
+          console.warn('Failed to apply live voice speed', e);
+        }
+      }
+    }, [connected, voiceSpeed, sendSessionSettings]);
 
     if (!connected) {
       // Pre-call minimal centered layout: two vertical sections
@@ -212,19 +232,32 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
             </div>
             {/* Bottom section: horizontal settings row */}
             <div className="w-full flex flex-col gap-6">
-              <ConfigSelector />
-              <div className="w-full flex flex-wrap justify-center gap-6">
-              <PersonaToggle
-                value={persona}
-                onChange={setPersona}
-                spicyMode={spicyMode}
-                onSpicyModeChange={setSpicyMode}
-              />
-              <VoiceSelect value={voiceId} onChange={setVoiceId} />
-              <ModelSelect value={modelId} onChange={setModelId} />
-              <div className="min-w-[260px] max-w-sm">
-                <VoiceSpeedSlider onSpeedChange={setVoiceSpeed} />
+              <div className="flex items-center gap-2">
+                <ConfigSelector />
+                <InfoTooltip content="Select which backend configuration / prompt variant to use for this session." side="right" />
               </div>
+              <div className="w-full flex flex-wrap justify-center gap-6">
+                <div className="flex items-center gap-2">
+                  <PersonaToggle
+                    value={persona}
+                    onChange={setPersona}
+                    spicyMode={spicyMode}
+                    onSpicyModeChange={setSpicyMode}
+                  />
+                  <InfoTooltip content="Change the persona tone. This affects wording and negotiation style." side="top" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <VoiceSelect value={voiceId} onChange={setVoiceId} />
+                  <InfoTooltip content="Choose the synthesis voice used for responses." side="top" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <ModelSelect value={modelId} onChange={setModelId} />
+                  <InfoTooltip content="Select the reasoning model powering the assistant." side="top" />
+                </div>
+                <div className="min-w-[260px] max-w-sm flex items-center gap-2">
+                  <VoiceSpeedSlider onSpeedChange={setVoiceSpeed} />
+                  <InfoTooltip content="Adjust real-time speech rate. Will apply on next utterance." side="top" />
+                </div>
               </div>
             </div>
           </div>
@@ -236,7 +269,7 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
     return (
       <div className="flex flex-col h-screen w-full">
         <SessionTimers />
-        <div className="flex-1 min-h-0 px-4 py-4 max-w-5xl w-full mx-auto flex flex-col gap-3">
+  <div className="flex-1 min-h-0 px-4 py-4 max-w-5xl w-full mx-auto flex flex-col gap-3">
           {convState.closingTriggered && (
             <div className="text-sm rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-300 px-3 py-2">
               Closing intent detected. You can wrap up or finalize the lead.
@@ -247,7 +280,28 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
               {m}
             </div>
           ))}
-          <Messages ref={ref} />
+          <div className="flex justify-end gap-2 pr-2">
+            {completedLeads.length > 0 && (
+              <button
+                onClick={() => {
+                  emit({ type: 'recap_requested' });
+                  const recap = generateRecapContent([...completedLeads, ...(draft ? [draft] : [])]);
+                  setLocalSyntheticMessages(msgs => [...msgs, recap]);
+                  emit({ type: 'recap_provided' });
+                }}
+                className="text-xs px-2 py-1 rounded bg-neutral-800 border border-neutral-700 hover:bg-neutral-700 transition"
+              >Recap Leads</button>
+            )}
+          </div>
+          <div id="main-content" className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
+            <div className="lg:col-span-2 min-h-0 flex flex-col">
+              <Messages ref={ref} />
+            </div>
+            <div className="min-h-0 flex flex-col gap-4 overflow-y-auto pb-2">
+              <NotesComponent callId={sessionId} />
+              <SpecFileUpload />
+            </div>
+          </div>
         </div>
         <div className="border-t border-muted/20" />
         <Controls />

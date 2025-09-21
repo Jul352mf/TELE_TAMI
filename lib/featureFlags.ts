@@ -1,3 +1,12 @@
+/**
+ * Feature flag snapshot (currently lightly used).
+ * NOTE: Not all flags are consumed yet; retained to support upcoming staged
+ * strategy unification & runtime gating (see decision-log entry 2025-09-21).
+ * When wiring proceeds:
+ *  - incrementalLeads merges into strategy-driven gating
+ *  - lighterConfirmations derived from strategy confirmationIntensity
+ *  - filePrompts remains for fallback to inline prompt (may deprecate later)
+ */
 export type FeatureFlags = {
   incrementalLeads: boolean;
   filePrompts: boolean;

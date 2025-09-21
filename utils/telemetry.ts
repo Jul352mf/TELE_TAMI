@@ -17,6 +17,7 @@ export type TelemetryEvent =
   | { type: 'strategy_selected'; strategy: string }
   | { type: 'incremental_fragment_received'; size: number; keys: string[] }
   | { type: 'incremental_finalized'; totalKeys: number }
+  | { type: 'incremental_unknown_fields_preserved'; count: number; keys: string[] }
   | { type: 'note_created'; length: number }
   | { type: 'spec_uploaded'; filename: string; size: number };
 
