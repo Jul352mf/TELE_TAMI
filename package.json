@@ -1,6 +1,7 @@
 {
-  "name": "TELE_TAMI",
-  "version": "0.2.0",
+  "name": "tele-tami",
+  "version": "0.2.1",
+  "packageManager": "pnpm@10.0.0",
   "private": true,
   "homepage": "https://github.com/humeai/hume-evi-next-js-starter",
   "scripts": {
