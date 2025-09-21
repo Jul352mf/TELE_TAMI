@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "name": "TELE_TAMI AI Workspace",
+  "description": "AI-optimized development environment for conversation system",
+  "features": {
+    "promptAnalysis": true,
+    "experimentRunner": true,
+    "metricsExport": true,
+    "contextAwareness": true
+  },
+  "scripts": {
+    "analyzePrompt": "node .ai-workspace/scripts/analyzePrompt.js",
+    "runExperiment": "node .ai-workspace/scripts/runExperiment.js",
+    "exportMetrics": "node .ai-workspace/scripts/exportMetrics.js"
+  },
+  "aiContext": {
+    "primaryLanguage": "TypeScript",
+    "framework": "Next.js",
+    "uiLibrary": "Radix UI + Tailwind CSS",
+    "voiceLibrary": "@humeai/voice-react",
+    "testFramework": "Jest"
+  }
+}

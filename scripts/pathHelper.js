@@ -219,7 +219,7 @@ function showRecentFiles(count = 10) {
   console.log(`${count} most recently modified files:`);
   files.slice(0, count).forEach((file, index) => {
     const timeAgo = formatTimeAgo(file.mtime);
-    console.log(`${index + 1:2}. ${file.path} (${timeAgo})`);
+    console.log(`${(index + 1).toString().padStart(2, ' ')}. ${file.path} (${timeAgo})`);
   });
 }
 

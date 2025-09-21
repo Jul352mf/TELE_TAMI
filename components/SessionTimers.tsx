@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useVoice } from "@humeai/voice-react";
 import { toast } from "sonner";
 import { emit } from "@/utils/telemetry";
+import TimeoutWarning from "./TimeoutWarning";
 
 export default function SessionTimers() {
   const { status, messages, disconnect } = useVoice();
@@ -64,5 +65,10 @@ export default function SessionTimers() {
     return () => clearInterval(t);
   }, [status.value, lastUserMsgAt, disconnect]);
 
-  return null;
+  return (
+    <TimeoutWarning 
+      connectedAt={connectedAtRef.current} 
+      lastUserMsgAt={lastUserMsgAt} 
+    />
+  );
 }
