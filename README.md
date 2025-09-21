@@ -75,8 +75,7 @@ Complete end-to-end test:
 
 2. **Test the Interface**
    - Navigate to `http://localhost:3000`
-   - Select persona (try "Seductive" for demo)
-   - Enable "🌶️ Spicy Mode" to unlock "Unhinged" option
+   - Select persona (Professional, Cynical, or Unhinged)
    - Click "Call TAMI" button (will show connection UI)
 
 3. **Test the API Directly**

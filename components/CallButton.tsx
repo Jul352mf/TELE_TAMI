@@ -17,7 +17,7 @@ import { useState, useEffect } from "react";
 
 interface CallButtonProps {
   accessToken: string;
-  persona: "professional" | "seductive" | "unhinged" | "cynical";
+  persona: "professional" | "unhinged" | "cynical";
   spicyMode?: boolean; // deprecated, retained optional for backward compatibility
   voiceId?: string;
   voiceSpeed?: number; // multiplier e.g. 0.5 - 2.0

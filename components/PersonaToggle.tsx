@@ -4,8 +4,8 @@ import { Toggle } from "@/components/ui/toggle";
 import { Select, SelectItem } from "@/components/ui/select";
 
 interface PersonaToggleProps {
-  value: "professional" | "seductive" | "unhinged" | "cynical";
-  onChange: (persona: "professional" | "seductive" | "unhinged" | "cynical") => void;
+  value: "professional" | "unhinged" | "cynical";
+  onChange: (persona: "professional" | "unhinged" | "cynical") => void;
   spicyMode?: boolean;
   onSpicyModeChange?: (enabled: boolean) => void;
   disabled?: boolean;
@@ -22,9 +22,8 @@ export default function PersonaToggle({
     <div className="flex items-end gap-3 w-full">
       <Select disabled={disabled} value={value} onValueChange={(v) => onChange(v as any)} containerClassName="w-full min-w-0" className="min-w-0">
         <SelectItem value="professional">Professional</SelectItem>
-        <SelectItem value="seductive">Seductive</SelectItem>
         <SelectItem value="cynical">Cynical</SelectItem>
-        {spicyMode && <SelectItem value="unhinged">Unhinged</SelectItem>}
+        <SelectItem value="unhinged">Unhinged</SelectItem>
       </Select>
       {onSpicyModeChange && (
         <Toggle

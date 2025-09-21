@@ -46,7 +46,6 @@ Telemetry reference: see `telemetry.md` for event shapes (`incremental_fragment_
 | Persona | Description |
 |---------|-------------|
 | professional | Warm, confident, business-focused, tasteful |
-| seductive | Upbeat, controlled energy, mildly sassy; maintains professional boundaries |
 | unhinged | Energetic, witty irreverence (never profane) |
 | cynical | Dry, sarcastic, sharp but respectful |
 

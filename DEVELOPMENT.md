@@ -29,7 +29,7 @@ npm test
 - `__tests__/` – unit tests (schema validation)
 
 ## Personas & Modes
-- Personas: professional, seductive, unhinged (gated by Spicy Mode)
+- Personas: professional, unhinged, cynical (all always available)
 - Ole Mode: auto-detected when the transcript matches `/\bole\b/i`; augments system prompt and payload
 - The SDK `onToolCall` is stubbed in `TeleTami.tsx`; the actual interception is handled within `CallButton` until SDK handlers are available
 

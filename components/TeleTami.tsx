@@ -30,7 +30,7 @@ import InfoTooltip from './InfoTooltip';
 import { Slider } from './ui/slider';
 
 function TeleTamiInner({ accessToken }: { accessToken: string }) {
-  const [persona, setPersona] = useState<"professional" | "seductive" | "unhinged" | "cynical">("professional");
+  const [persona, setPersona] = useState<"professional" | "unhinged" | "cynical">("professional");
   const [voiceId, setVoiceId] = useState<string>("default");
   const [modelId, setModelId] = useState<string>("hume-evi-3");
   const [recipientEmail, setRecipientEmail] = useState<string>("");

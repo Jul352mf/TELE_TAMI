@@ -19,4 +19,4 @@ TELE TAMI is an AI voice assistant for capturing structured commodity trading le
 - Post-conversation analytics dashboards (future possibility).
 
 ## Personas
-See `prompting.md` for detailed persona overlays (professional, seductive, unhinged, cynical) and mode (Ole interview).
+See `prompting.md` for detailed persona overlays (professional, unhinged, cynical) and mode (Ole interview).
