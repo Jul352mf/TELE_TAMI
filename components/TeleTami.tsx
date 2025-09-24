@@ -29,96 +29,251 @@ import SpecFileUpload from './SpecFileUpload';
 import InfoTooltip from './InfoTooltip';
 import { Slider } from './ui/slider';
 
+// Hoisted components to avoid remount on parent re-renders
+const VoiceSpeedDropdown: React.FC<{ current: number; onChange: (v: number) => void }> = ({ current, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const panelId = 'voice-speed-panel';
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onClick = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('mousedown', onClick);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('mousedown', onClick); };
+  }, [open]);
+
+  return (
+    <div className="flex flex-col gap-1" ref={wrapperRef}>
+      <button
+        type="button"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen(o => !o)}
+        className="h-10 w-full rounded-md border border-border bg-input px-3 text-sm text-foreground flex items-center justify-between hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+      >
+        <span className="sr-only">Voice Speed</span>
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          {current.toFixed(1)}x
+          <svg aria-hidden="true" className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </span>
+      </button>
+      {open && (
+        <div
+          id={panelId}
+          className="rounded-md border border-border bg-popover p-4 flex flex-col gap-4 shadow-lg animate-in fade-in"
+        >
+          <div className="flex items-center gap-3 select-none">
+            <Slider
+              min={0.5}
+              max={2.0}
+              step={0.1}
+              value={[current]}
+              onValueChange={(v) => onChange(v[0])}
+              aria-label="Voice speed"
+              className="w-full"
+            />
+          </div>
+          <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+            <span>0.5x</span>
+            <span>{current.toFixed(1)}x</span>
+            <span>2.0x</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const AdvancedSessionConfig: React.FC<{ label: string }> = ({ label }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-border rounded-md bg-card transition-colors">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-foreground/80 bg-card hover:bg-accent/60 focus:outline-none focus:ring-2 focus:ring-ring rounded-md transition-colors"
+      >
+        <span>{label}</span>
+        <span className="text-xs text-neutral-500">{open ? 'Hide' : 'Show'}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 pt-2 flex flex-col gap-3 text-sm">
+          <ConfigSelector />
+          <p className="text-[11px] text-muted-foreground leading-relaxed">Select or layer configuration options. More tuning controls (sampling, prompt variants) will appear here later.</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+type Persona = "professional" | "unhinged" | "cynical";
+
+interface SessionUIProps {
+  accessToken: string;
+  persona: Persona;
+  setPersona: (p: Persona) => void;
+  voiceId: string;
+  setVoiceId: (s: string) => void;
+  voiceSpeed: number;
+  setVoiceSpeed: (n: number) => void;
+  modelId: string;
+  setModelId: (s: string) => void;
+  configIdOption?: import("@/lib/settings").TriOption<string>;
+  includeCodeSystemPrompt: boolean;
+  handleToolCall: (name: string, args: any) => Promise<void>;
+  recipientEmail: string;
+  setRecipientEmail: (s: string) => void;
+  messagesRef: React.MutableRefObject<ComponentRef<typeof Messages> | null>;
+  sessionId: string;
+  draft: any;
+  completedLeads: any[];
+}
+
+function SessionUI({
+  accessToken,
+  persona,
+  setPersona,
+  voiceId,
+  setVoiceId,
+  voiceSpeed,
+  setVoiceSpeed,
+  modelId,
+  setModelId,
+  configIdOption,
+  includeCodeSystemPrompt,
+  handleToolCall,
+  recipientEmail,
+  setRecipientEmail,
+  messagesRef,
+  sessionId,
+  draft,
+  completedLeads,
+}: SessionUIProps) {
+  const { status } = useVoice();
+  const connected = status.value === 'connected';
+  const { state: convState, pendingPushBack, consumePushBack } = useConversationState({ enablePushBack: true });
+  const [localSyntheticMessages, setLocalSyntheticMessages] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (pendingPushBack) {
+      const pb = consumePushBack();
+      if (pb) {
+        setLocalSyntheticMessages(msgs => [...msgs, pb.response]);
+      }
+    }
+  }, [pendingPushBack, consumePushBack]);
+
+  if (!connected) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-background px-6 transition-colors">
+        <div className="w-full max-w-lg mx-auto flex flex-col items-center gap-8">
+          <CallButton
+            accessToken={accessToken}
+            persona={persona}
+            voiceId={voiceId}
+            voiceSpeed={voiceSpeed}
+            modelId={modelId}
+            onToolCall={handleToolCall}
+            configIdOption={configIdOption}
+            includeCodeSystemPrompt={includeCodeSystemPrompt}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
+            <div className="flex flex-col gap-0">
+              <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Persona<InfoTooltip content="Tone & negotiation style." side="top" /></label>
+              <div className="w-full opacity-100">
+                <PersonaToggle value={persona} onChange={setPersona} disabled={status.value === 'connecting' || status.value === 'connected'} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0">
+              <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Model<InfoTooltip content="Reasoning model." side="top" /></label>
+              <div className="w-full">
+                <ModelSelect value={modelId} onChange={setModelId} disabled={status.value === 'connecting' || status.value === 'connected'} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0">
+              <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Voice<InfoTooltip content="Synthesis voice." side="top" /></label>
+              <div className="w-full">
+                <VoiceSelect value={voiceId} onChange={setVoiceId} disabled={status.value === 'connecting' || status.value === 'connected'} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0">
+              <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Voice Speed<InfoTooltip content="Adjust spoken rate" side="top" /></label>
+              <div className={status.value === 'connected' ? 'opacity-60 pointer-events-none' : ''}>
+                <VoiceSpeedDropdown current={voiceSpeed} onChange={setVoiceSpeed} />
+              </div>
+            </div>
+          </div>
+          <div className="w-full mt-2">
+            <AdvancedSessionConfig label="Session Configuration" />
+          </div>
+          <div className="w-full flex flex-col items-center gap-2">
+            <input
+              type="email"
+              placeholder="Email to receive lead (optional)"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              className="w-full rounded-md border border-border bg-input px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="text-[11px] text-muted-foreground leading-tight">We’ll send captured lead details to this address (optional).</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-screen w-full bg-background text-foreground transition-colors">
+      <SessionTimers />
+      <div className="flex-1 min-h-0 px-4 py-4 max-w-5xl w-full mx-auto flex flex-col gap-3">
+        {convState.closingTriggered && (
+          <div className="text-sm rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-300 px-3 py-2 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-200">
+            Closing intent detected. You can wrap up or finalize the lead.
+          </div>
+        )}
+        {localSyntheticMessages.map((m, i) => (
+          <div key={i} className="text-xs rounded bg-muted px-2 py-1 self-center max-w-md text-center text-muted-foreground/90">{m}</div>
+        ))}
+        <div className="flex justify-end gap-2 pr-2">
+          {completedLeads.length > 0 && (
+            <button
+              onClick={() => {
+                emit({ type: 'recap_requested' });
+                const recap = generateRecapContent([...completedLeads, ...(draft ? [draft] : [])]);
+                setLocalSyntheticMessages(msgs => [...msgs, recap]);
+                emit({ type: 'recap_provided' });
+              }}
+              className="text-xs px-2 py-1 rounded bg-secondary border border-border hover:bg-secondary/80 transition-colors"
+            >Recap Leads</button>
+          )}
+        </div>
+        <div id="main-content" className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
+          <div className="lg:col-span-2 min-h-0 flex flex-col">
+            <Messages ref={messagesRef} />
+          </div>
+          <div className="min-h-0 flex flex-col gap-4 overflow-y-auto pb-2">
+            <NotesComponent callId={sessionId} />
+            <SpecFileUpload />
+          </div>
+        </div>
+      </div>
+      <div className="border-t border-muted/20" />
+      <Controls />
+    </div>
+  );
+}
+
 function TeleTamiInner({ accessToken }: { accessToken: string }) {
-  const [persona, setPersona] = useState<"professional" | "unhinged" | "cynical">("professional");
+  const [persona, setPersona] = useState<Persona>("professional");
   const [voiceId, setVoiceId] = useState<string>("default");
   const [modelId, setModelId] = useState<string>("hume-evi-3");
   const [recipientEmail, setRecipientEmail] = useState<string>("");
   const [voiceSpeed, setVoiceSpeed] = useState<number>(1.0);
-
-  // Voice speed dropdown expanding slider
-  const VoiceSpeedDropdown: React.FC<{ current: number; onChange: (v: number) => void }> = ({ current, onChange }) => {
-    const [open, setOpen] = useState(false);
-    const panelId = 'voice-speed-panel';
-    const wrapperRef = useRef<HTMLDivElement | null>(null);
-
-    useEffect(() => {
-        if (!open) return; 
-      const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-      const onClick = (e: MouseEvent) => {
-        if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
-      };
-      window.addEventListener('keydown', onKey);
-      window.addEventListener('mousedown', onClick);
-      return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('mousedown', onClick); };
-    }, [open]);
-
-    return ( 
-  <div className="flex flex-col gap-1" ref={wrapperRef}>
-        <button
-          type="button"
-          aria-haspopup="true"
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={() => setOpen(o => !o)}
-          className="h-10 w-full rounded-md border border-border bg-input px-3 text-sm text-foreground flex items-center justify-between hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
-        >
-            <span className="sr-only">Voice Speed</span>
-          <span className="flex items-center gap-2 text-xs text-muted-foreground">
-            {current.toFixed(1)}x
-            <svg aria-hidden="true" className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-          </span>
-        </button>
-        {open && (
-          <div
-            id={panelId}
-            className="rounded-md border border-border bg-popover p-4 flex flex-col gap-4 shadow-lg animate-in fade-in"
-          >
-            {/* Radix slider alternative: simple custom track for now replaced soon */}
-            <div className="flex items-center gap-3 select-none">
-              <Slider
-                min={0.5}
-                max={2.0}
-                step={0.1}
-                value={[current]}
-                onValueChange={(v) => onChange(v[0])}
-                aria-label="Voice speed"
-                className="w-full"
-              />
-            </div>
-            <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
-              <span>0.5x</span>
-              <span>{current.toFixed(1)}x</span>
-              <span>2.0x</span>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const AdvancedSessionConfig: React.FC<{ label: string }> = ({ label }) => {
-    const [open, setOpen] = useState(false);
-    return (
-  <div className="border border-border rounded-md bg-card transition-colors">
-        <button
-          type="button"
-          onClick={() => setOpen(o => !o)}
-          aria-expanded={open}
-          className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-foreground/80 bg-card hover:bg-accent/60 focus:outline-none focus:ring-2 focus:ring-ring rounded-md transition-colors"
-        >
-          <span>{label}</span>
-          <span className="text-xs text-neutral-500">{open ? 'Hide' : 'Show'}</span>
-        </button>
-        {open && (
-          <div className="px-4 pb-4 pt-2 flex flex-col gap-3 text-sm">
-            <ConfigSelector />
-            <p className="text-[11px] text-muted-foreground leading-relaxed">Select or layer configuration options. More tuning controls (sampling, prompt variants) will appear here later.</p>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   // Restore persisted settings (legacy spicyMode ignored)
   useEffect(() => {
@@ -258,127 +413,7 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
     });
   };
 
-  // Inner component consuming voice status (must be inside provider)
-  function SessionUI() {
-    const { status, sendSessionSettings } = useVoice();
-    const connected = status.value === 'connected';
-    const { state: convState, pendingPushBack, consumePushBack } = useConversationState({ enablePushBack: true });
-    const [localSyntheticMessages, setLocalSyntheticMessages] = useState<string[]>([]);
-
-    useEffect(() => {
-      if (pendingPushBack) {
-        const pb = consumePushBack();
-        if (pb) {
-          setLocalSyntheticMessages(msgs => [...msgs, pb.response]);
-        }
-      }
-    }, [pendingPushBack, consumePushBack]);
-
-    // Connect-time lock: no dynamic reapplication of persona/model/voice/voiceSpeed post-connect
-
-    if (!connected) {
-      return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-background px-6 transition-colors">
-          <div className="w-full max-w-lg mx-auto flex flex-col items-center gap-8">
-            {/* Call Button */}
-            <CallButton
-              accessToken={accessToken}
-              persona={persona}
-              voiceId={voiceId}
-              voiceSpeed={voiceSpeed}
-              modelId={modelId}
-              onToolCall={handleToolCall}
-              configIdOption={settings.configId}
-              includeCodeSystemPrompt={settings.codeSystemPrompt.mode !== 'NONE'}
-            />
-            {/* Settings Grid (match reference: grid sm:2 cols) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
-              <div className="flex flex-col gap-0">
-                <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Persona<InfoTooltip content="Tone & negotiation style." side="top" /></label>
-                <div className="w-full opacity-100">
-                  <PersonaToggle value={persona} onChange={setPersona} disabled={status.value === 'connecting' || status.value === 'connected'} />
-                </div>
-              </div>
-              <div className="flex flex-col gap-0">
-                <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Model<InfoTooltip content="Reasoning model." side="top" /></label>
-                <div className="w-full">
-                  <ModelSelect value={modelId} onChange={setModelId} disabled={status.value === 'connecting' || status.value === 'connected'} />
-                </div>
-              </div>
-              <div className="flex flex-col gap-0">
-                <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Voice<InfoTooltip content="Synthesis voice." side="top" /></label>
-                <div className="w-full">
-                  <VoiceSelect value={voiceId} onChange={setVoiceId} disabled={status.value === 'connecting' || status.value === 'connected'} />
-                </div>
-              </div>
-              <div className="flex flex-col gap-0">
-                <label className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">Voice Speed<InfoTooltip content="Adjust spoken rate" side="top" /></label>
-                <div className={status.value === 'connected' ? 'opacity-60 pointer-events-none' : ''}>
-                  <VoiceSpeedDropdown current={voiceSpeed} onChange={setVoiceSpeed} />
-                </div>
-              </div>
-            </div>
-            {/* Session Configuration */}
-            <div className="w-full mt-2">
-              <AdvancedSessionConfig label="Session Configuration" />
-            </div>
-            {/* Email Field (moved below session config) */}
-            <div className="w-full flex flex-col items-center gap-2">
-              <input
-                type="email"
-                placeholder="Email to receive lead (optional)"
-                value={recipientEmail}
-                onChange={(e) => setRecipientEmail(e.target.value)}
-                className="w-full rounded-md border border-border bg-input px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              <p className="text-[11px] text-muted-foreground leading-tight">We’ll send captured lead details to this address (optional).</p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Connected session view
-    return (
-      <div className="flex flex-col h-screen w-full bg-background text-foreground transition-colors">
-        <SessionTimers />
-        <div className="flex-1 min-h-0 px-4 py-4 max-w-5xl w-full mx-auto flex flex-col gap-3">
-          {convState.closingTriggered && (
-            <div className="text-sm rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-300 px-3 py-2 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-200">
-              Closing intent detected. You can wrap up or finalize the lead.
-            </div>
-          )}
-          {localSyntheticMessages.map((m, i) => (
-            <div key={i} className="text-xs rounded bg-muted px-2 py-1 self-center max-w-md text-center text-muted-foreground/90">{m}</div>
-          ))}
-          <div className="flex justify-end gap-2 pr-2">
-            {completedLeads.length > 0 && (
-              <button
-                onClick={() => {
-                  emit({ type: 'recap_requested' });
-                  const recap = generateRecapContent([...completedLeads, ...(draft ? [draft] : [])]);
-                  setLocalSyntheticMessages(msgs => [...msgs, recap]);
-                  emit({ type: 'recap_provided' });
-                }}
-                className="text-xs px-2 py-1 rounded bg-secondary border border-border hover:bg-secondary/80 transition-colors"
-              >Recap Leads</button>
-            )}
-          </div>
-          <div id="main-content" className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
-            <div className="lg:col-span-2 min-h-0 flex flex-col">
-              <Messages ref={ref} />
-            </div>
-            <div className="min-h-0 flex flex-col gap-4 overflow-y-auto pb-2">
-              <NotesComponent callId={sessionId} />
-              <SpecFileUpload />
-            </div>
-          </div>
-        </div>
-        <div className="border-t border-muted/20" />
-        <Controls />
-      </div>
-    );
-  }
+  // Connect-time lock: no dynamic reapplication of persona/model/voice/voiceSpeed post-connect
 
   return (
     <VoiceProvider
@@ -414,7 +449,26 @@ function TeleTamiInner({ accessToken }: { accessToken: string }) {
         }
       }}
     >
-      <SessionUI />
+      <SessionUI
+        accessToken={accessToken}
+        persona={persona}
+        setPersona={setPersona}
+        voiceId={voiceId}
+        setVoiceId={setVoiceId}
+        voiceSpeed={voiceSpeed}
+        setVoiceSpeed={setVoiceSpeed}
+        modelId={modelId}
+        setModelId={setModelId}
+        configIdOption={settings.configId}
+        includeCodeSystemPrompt={settings.codeSystemPrompt.mode !== 'NONE'}
+        handleToolCall={handleToolCall}
+        recipientEmail={recipientEmail}
+        setRecipientEmail={setRecipientEmail}
+        messagesRef={ref}
+        sessionId={sessionId}
+        draft={draft}
+        completedLeads={completedLeads}
+      />
     </VoiceProvider>
   );
 }
